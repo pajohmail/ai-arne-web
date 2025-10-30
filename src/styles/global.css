@@ -1,0 +1,30 @@
+:root{--bar-h:240px}
+*{box-sizing:border-box}
+html,body,#root{height:100%}
+body{margin:0;background:#000;color:#111;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;line-height:1.5}
+
+.topbar,.bottombar{height:var(--bar-h);background:#000;color:#fff;display:flex;align-items:center}
+.bar-inner{max-width:960px;margin:0 auto;padding:0 16px;display:flex;align-items:center;justify-content:space-between;width:100%}
+.brand{display:flex;align-items:center;gap:12px;color:#fff;text-decoration:none;font-weight:600}
+.brand img{display:block}
+.main-nav{display:flex;gap:16px}
+.main-nav a{color:#fff;text-decoration:none}
+.main-nav a:hover, .main-nav a:focus{text-decoration:underline}
+
+.container{max-width:960px;margin:8px auto 16px;padding:16px;background:#fff;color:#111;border-radius:8px}
+
+a{color:#111}
+.container a:hover,.container a:focus{text-decoration:underline}
+
+.card-list{display:grid;gap:12px}
+.card{border:1px solid #eee;padding:12px;border-radius:6px}
+.muted{color:#555;font-size:.9rem}
+.space-y-8 > * + *{margin-top:8px}
+.btn{display:inline-block;background:#111;color:#fff;border:0;border-radius:6px;padding:8px 12px;text-decoration:none}
+.btn:hover,.btn:focus{opacity:.9}
+
+@media (min-width: 768px){
+  .container{padding:24px}
+}
+
+
