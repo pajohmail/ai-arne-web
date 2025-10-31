@@ -11,6 +11,10 @@ const PostDetail = React.lazy(() => import('./routes/PostDetail'));
 const News = React.lazy(() => import('./routes/News'));
 const NewsDetail = React.lazy(() => import('./routes/NewsDetail'));
 const TutorialDetail = React.lazy(() => import('./routes/TutorialDetail'));
+const PrivacyPolicy = React.lazy(() => import('./routes/PrivacyPolicy'));
+const About = React.lazy(() => import('./routes/About'));
+const Projects = React.lazy(() => import('./routes/Projects'));
+const MatteProfessorn = React.lazy(() => import('./routes/MatteProfessorn'));
 const NotFound = React.lazy(() => import('./routes/NotFound'));
 
 declare global {
@@ -57,6 +61,10 @@ function Bootstrap() {
             <Route path="/news" element={<News />} />
             <Route path="/news/:slug" element={<NewsDetail />} />
             <Route path="/tutorial/:id" element={<TutorialDetail />} />
+            <Route path="/om-mig" element={<About />} />
+            <Route path="/projekt" element={<Projects />} />
+            <Route path="/projekt/matte-professorn" element={<MatteProfessorn />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/404" element={<NotFound />} />
             <Route path="*" element={<Navigate to="/404" replace />} />
           </Routes>

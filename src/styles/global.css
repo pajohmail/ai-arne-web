@@ -1,9 +1,10 @@
-:root{--bar-h:240px}
+:root{--topbar-h:180px;--bottombar-h:64px}
 *{box-sizing:border-box}
 html,body,#root{height:100%}
 body{margin:0;background:#000;color:#111;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;line-height:1.5}
 
-.topbar,.bottombar{height:var(--bar-h);background:#000;color:#fff;display:flex;align-items:center}
+.topbar{height:var(--topbar-h);background:#000;color:#fff;display:flex;align-items:center}
+.bottombar{height:var(--bottombar-h);background:#000;color:#fff;display:flex;align-items:center}
 .bar-inner{max-width:960px;margin:0 auto;padding:0 16px;display:flex;align-items:center;justify-content:space-between;width:100%}
 .brand{display:flex;align-items:center;gap:12px;color:#fff;text-decoration:none;font-weight:600}
 .brand img{display:block}
@@ -15,6 +16,11 @@ body{margin:0;background:#000;color:#111;font-family:system-ui,-apple-system,Seg
 
 a{color:#111}
 .container a:hover,.container a:focus{text-decoration:underline}
+
+ul{margin:12px 0;padding-left:24px}
+li{margin:6px 0}
+h2{margin-top:24px;margin-bottom:12px}
+h3{margin-top:16px;margin-bottom:8px}
 
 .card-list{display:grid;gap:12px}
 .card{border:1px solid #eee;padding:12px;border-radius:6px}

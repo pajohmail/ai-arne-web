@@ -15,6 +15,8 @@ export default function App({ children }: PropsWithChildren) {
             </NavLink>
             <NavLink to="/posts">API‑nyheter</NavLink>
             <NavLink to="/news">Nyheter</NavLink>
+            <NavLink to="/om-mig">Om mig</NavLink>
+            <NavLink to="/projekt">Projekt</NavLink>
           </nav>
         </div>
       </header>
@@ -22,7 +24,12 @@ export default function App({ children }: PropsWithChildren) {
       <main className="container" role="main">{children}</main>
 
       <footer className="bottombar">
-        <div className="bar-inner">© {new Date().getFullYear()} AI‑Arne</div>
+        <div className="bar-inner">
+          <span>© {new Date().getFullYear()} AI‑Arne</span>
+          <Link to="/privacy-policy" style={{ color: '#fff', textDecoration: 'none' }}>
+            Privacy Policy
+          </Link>
+        </div>
       </footer>
     </div>
   );
