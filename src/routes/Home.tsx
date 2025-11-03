@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import Seo from '../components/Seo';
 import { EmptyState, ErrorState, Skeleton } from '../components/States';
-import { mapNews, mapPost, queryCollection } from '../lib/firestore';
+import { mapNews, mapPost, mapTutorial, queryCollection } from '../lib/firestore';
 import { Link } from 'react-router-dom';
 
 export default function Home() {
@@ -9,18 +9,21 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [posts, setPosts] = useState<any[]>([]);
   const [news, setNews] = useState<any[]>([]);
+  const [tutorials, setTutorials] = useState<any[]>([]);
 
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const [p, n] = await Promise.all([
+        const [p, n, t] = await Promise.all([
           queryCollection({ collectionId: 'posts', orderByCreatedAtDesc: true, limit: 10 }),
           queryCollection({ collectionId: 'news', orderByCreatedAtDesc: true, limit: 10 }),
+          queryCollection({ collectionId: 'tutorials', orderByCreatedAtDesc: true, limit: 10 }),
         ]);
         if (!mounted) return;
         setPosts(p.map(mapPost).filter(Boolean));
         setNews(n.map(mapNews).filter(Boolean));
+        setTutorials(t.map(mapTutorial).filter(Boolean));
       } catch (e: any) {
         setError('Kunde inte hämta data. Försök igen senare.');
       } finally {
@@ -61,6 +64,21 @@ export default function Home() {
             <article key={n.id} className="card">
               <h3><Link to={`/news/${n.slug}`}>{n.title}</Link></h3>
               {n.excerpt && <p className="muted">{n.excerpt}</p>}
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section>
+        <h2>Senaste tutorials</h2>
+        {loading && <Skeleton lines={3} />}
+        {!loading && !error && tutorials.length === 0 && (
+          <EmptyState message="Inga tutorials hittades." />
+        )}
+        <div className="card-list">
+          {tutorials.map((t: any) => (
+            <article key={t.id} className="card">
+              <h3><Link to={`/tutorial/${t.id}`}>{t.title}</Link></h3>
             </article>
           ))}
         </div>

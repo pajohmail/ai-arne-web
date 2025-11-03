@@ -11,6 +11,7 @@ const PostDetail = React.lazy(() => import('./routes/PostDetail'));
 const News = React.lazy(() => import('./routes/News'));
 const NewsDetail = React.lazy(() => import('./routes/NewsDetail'));
 const TutorialDetail = React.lazy(() => import('./routes/TutorialDetail'));
+const Tutorials = React.lazy(() => import('./routes/Tutorials'));
 const PrivacyPolicy = React.lazy(() => import('./routes/PrivacyPolicy'));
 const About = React.lazy(() => import('./routes/About'));
 const Projects = React.lazy(() => import('./routes/Projects'));
@@ -20,7 +21,6 @@ const NotFound = React.lazy(() => import('./routes/NotFound'));
 declare global {
   interface Window {
     __APP_CONFIG__?: {
-      projectId: string;
       publicBaseUrl?: string;
     };
   }
@@ -36,11 +36,10 @@ function Bootstrap() {
           const cfg = await res.json();
           window.__APP_CONFIG__ = cfg;
         } else {
-          // Config saknas: fortsätt ändå (kräver att projectId injiceras manuellt om behövs)
-          window.__APP_CONFIG__ = window.__APP_CONFIG__ ?? { projectId: '' };
+          window.__APP_CONFIG__ = window.__APP_CONFIG__ ?? {};
         }
       } catch {
-        window.__APP_CONFIG__ = window.__APP_CONFIG__ ?? { projectId: '' };
+        window.__APP_CONFIG__ = window.__APP_CONFIG__ ?? {};
       } finally {
         setReady(true);
       }
@@ -60,6 +59,7 @@ function Bootstrap() {
             <Route path="/post/:slug" element={<PostDetail />} />
             <Route path="/news" element={<News />} />
             <Route path="/news/:slug" element={<NewsDetail />} />
+            <Route path="/tutorials" element={<Tutorials />} />
             <Route path="/tutorial/:id" element={<TutorialDetail />} />
             <Route path="/om-mig" element={<About />} />
             <Route path="/projekt" element={<Projects />} />

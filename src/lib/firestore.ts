@@ -48,72 +48,90 @@ export interface QueryArgs {
   offset?: number;
 }
 
-function getProjectId(): string {
-  const pid = window.__APP_CONFIG__?.projectId?.trim();
-  if (!pid) throw new Error('Saknar projectId i config.json');
-  return pid;
-}
-
-function runQueryUrl() {
-  const pid = getProjectId();
-  return `https://firestore.googleapis.com/v1/projects/${pid}/databases/(default)/documents:runQuery`;
-}
-
-function valueFilter(fieldPath: string, value: string) {
-  return {
-    fieldFilter: {
-      field: { fieldPath },
-      op: 'EQUAL',
-      value: { stringValue: value },
-    },
-  } as const;
-}
-
-export async function queryCollection(args: QueryArgs): Promise<any[]> {
-  const structuredQuery: any = {
-    from: [{ collectionId: args.collectionId }],
-  };
-  if (args.whereEq) {
-    structuredQuery.where = valueFilter(args.whereEq.field, args.whereEq.value);
-  }
-  if (args.orderByCreatedAtDesc) {
-    structuredQuery.orderBy = [
-      { field: { fieldPath: 'createdAt' }, direction: 'DESCENDING' },
-    ];
-  }
-  if (typeof args.limit === 'number') structuredQuery.limit = args.limit;
-  if (typeof args.offset === 'number' && args.offset > 0) structuredQuery.offset = args.offset;
-
-  const body = { structuredQuery };
-  const key = `rq:${JSON.stringify(body)}`;
-  const url = runQueryUrl();
+async function fetchFromPhpApi(endpoint: string, params: Record<string, string | number> = {}): Promise<any> {
+  const queryString = new URLSearchParams(
+    Object.entries(params).reduce((acc, [k, v]) => {
+      acc[k] = String(v);
+      return acc;
+    }, {} as Record<string, string>)
+  ).toString();
+  
+  const url = `/api/${endpoint}${queryString ? '?' + queryString : ''}`;
+  const key = `php:${url}`;
+  
   return getJsonCached(key, async () => {
     const res = await fetchWithTimeout(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+      method: 'GET',
       timeoutMs: 15000,
     });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+      throw new Error(error.error || `HTTP ${res.status}`);
+    }
+    
     const json = await res.json();
-    if (!Array.isArray(json)) return [];
-    return json;
+    if (!json.success) {
+      throw new Error(json.error || 'Okänt fel från API');
+    }
+    
+    return json.data;
   });
 }
 
-// Firestore helper mappning
-type FSValue =
-  | { stringValue?: string }
-  | { timestampValue?: string }
-  | { integerValue?: string };
-
-function getField(fields: Record<string, FSValue> | undefined, key: string): string | undefined {
-  if (!fields) return undefined;
-  const v = fields[key] as any;
-  return v?.stringValue ?? v?.timestampValue ?? v?.integerValue ?? undefined;
+export async function queryCollection(args: QueryArgs): Promise<any[]> {
+  const limit = args.limit ?? 10;
+  
+  // Hämta lista av posts
+  if (args.collectionId === 'posts' && !args.whereEq && args.orderByCreatedAtDesc) {
+    return fetchFromPhpApi('posts.php', { limit });
+  }
+  
+  // Hämta lista av news
+  if (args.collectionId === 'news' && !args.whereEq && args.orderByCreatedAtDesc) {
+    return fetchFromPhpApi('news.php', { limit });
+  }
+  
+  // Hämta lista av tutorials
+  if (args.collectionId === 'tutorials' && !args.whereEq && args.orderByCreatedAtDesc) {
+    return fetchFromPhpApi('tutorials.php', { limit });
+  }
+  
+  // Hämta post via slug
+  if (args.collectionId === 'posts' && args.whereEq?.field === 'slug') {
+    const data = await fetchFromPhpApi('post.php', { slug: args.whereEq.value });
+    return [data]; // Returnera som array för kompatibilitet
+  }
+  
+  // Hämta news via slug
+  if (args.collectionId === 'news' && args.whereEq?.field === 'slug') {
+    const data = await fetchFromPhpApi('news-item.php', { slug: args.whereEq.value });
+    return [data]; // Returnera som array för kompatibilitet
+  }
+  
+  // Hämta tutorial via postId
+  if (args.collectionId === 'tutorials' && args.whereEq?.field === 'postId') {
+    const data = await fetchFromPhpApi('tutorial.php', { postId: args.whereEq.value });
+    return data ? [data] : []; // Returnera som array för kompatibilitet
+  }
+  
+  // Hämta tutorial via id (__name__ == 'tutorials/{id}')
+  if (args.collectionId === 'tutorials' && args.whereEq?.field === '__name__') {
+    const value = args.whereEq.value;
+    // Ta bort 'tutorials/' prefix om det finns
+    const id = value.startsWith('tutorials/') ? value.substring(11) : value;
+    const data = await fetchFromPhpApi('tutorial.php', { id });
+    return data ? [data] : []; // Returnera som array för kompatibilitet
+  }
+  
+  // Fallback: returnera tom array
+  return [];
 }
 
+// Behåll dessa funktioner för kompatibilitet, men de används inte längre
+// eftersom PHP returnerar redan normaliserade data
 export function getDocId(row: any): string | undefined {
+  if (row?.id) return row.id;
   const name: string | undefined = row?.document?.name;
   if (!name) return undefined;
   const parts = name.split('/');
@@ -121,66 +139,30 @@ export function getDocId(row: any): string | undefined {
 }
 
 export function mapPost(row: any): PostDoc | undefined {
-  const doc = row?.document;
-  if (!doc) return undefined;
-  const fields = doc.fields as Record<string, FSValue> | undefined;
-  const id = getDocId(row);
-  const slug = getField(fields, 'slug');
-  const title = getField(fields, 'title');
-  if (!id || !slug || !title) return undefined;
-  return {
-    id,
-    slug,
-    title,
-    excerpt: getField(fields, 'excerpt'),
-    content: getField(fields, 'content'),
-    provider: getField(fields, 'provider'),
-    sourceUrl: getField(fields, 'sourceUrl'),
-    linkedinUrn: getField(fields, 'linkedinUrn'),
-    createdAt: getField(fields, 'createdAt'),
-    updatedAt: getField(fields, 'updatedAt'),
-  };
+  // PHP returnerar redan normaliserade data, så returnera direkt om det är PostDoc
+  if (row && typeof row === 'object' && row.id && row.slug && row.title) {
+    return row as PostDoc;
+  }
+  // Fallback för legacy-format (används ej längre)
+  return undefined;
 }
 
 export function mapNews(row: any): NewsDoc | undefined {
-  const doc = row?.document;
-  if (!doc) return undefined;
-  const fields = doc.fields as Record<string, FSValue> | undefined;
-  const id = getDocId(row);
-  const slug = getField(fields, 'slug');
-  const title = getField(fields, 'title');
-  if (!id || !slug || !title) return undefined;
-  return {
-    id,
-    slug,
-    title,
-    excerpt: getField(fields, 'excerpt'),
-    content: getField(fields, 'content'),
-    sourceUrl: getField(fields, 'sourceUrl'),
-    source: getField(fields, 'source'),
-    linkedinUrn: getField(fields, 'linkedinUrn'),
-    createdAt: getField(fields, 'createdAt'),
-    updatedAt: getField(fields, 'updatedAt'),
-  };
+  // PHP returnerar redan normaliserade data, så returnera direkt om det är NewsDoc
+  if (row && typeof row === 'object' && row.id && row.slug && row.title) {
+    return row as NewsDoc;
+  }
+  // Fallback för legacy-format (används ej längre)
+  return undefined;
 }
 
 export function mapTutorial(row: any): TutorialDoc | undefined {
-  const doc = row?.document;
-  if (!doc) return undefined;
-  const fields = doc.fields as Record<string, FSValue> | undefined;
-  const id = getDocId(row);
-  const postId = getField(fields, 'postId');
-  const title = getField(fields, 'title');
-  if (!id || !postId || !title) return undefined;
-  return {
-    id,
-    postId,
-    title,
-    content: getField(fields, 'content'),
-    sourceUrl: getField(fields, 'sourceUrl'),
-    createdAt: getField(fields, 'createdAt'),
-    updatedAt: getField(fields, 'updatedAt'),
-  };
+  // PHP returnerar redan normaliserade data, så returnera direkt om det är TutorialDoc
+  if (row && typeof row === 'object' && row.id && row.postId && row.title) {
+    return row as TutorialDoc;
+  }
+  // Fallback för legacy-format (används ej längre)
+  return undefined;
 }
 
 

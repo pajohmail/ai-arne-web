@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+api/config.php
+public_html_*.html
+public_html_*.env*/
+aiarne_old.png
+aiarne2.png
+

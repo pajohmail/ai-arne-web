@@ -1,0 +1,8 @@
+<?php
+// Konfiguration för Firestore API
+// Kopiera denna fil till config.php och fyll i dina värden
+
+define('FIRESTORE_PROJECT_ID', 'ai-arne-agents');
+define('FIRESTORE_API_KEY', 'YOUR_FIREBASE_WEB_API_KEY'); // Hämta från Firebase Console -> Project Settings -> Web API Key
+?>
+
