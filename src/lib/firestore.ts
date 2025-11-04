@@ -59,23 +59,61 @@ async function fetchFromPhpApi(endpoint: string, params: Record<string, string |
   const url = `/api/${endpoint}${queryString ? '?' + queryString : ''}`;
   const key = `php:${url}`;
   
+  // Debug: Logga params och URL
+  if (import.meta.env.DEV && endpoint === 'tutorial.php') {
+    console.log('fetchFromPhpApi - params:', params, 'url:', url);
+    if (params.id) {
+      console.log('fetchFromPhpApi - id param:', params.id, 'type:', typeof params.id, 'length:', String(params.id).length);
+    }
+  }
+  
   return getJsonCached(key, async () => {
-    const res = await fetchWithTimeout(url, {
-      method: 'GET',
-      timeoutMs: 15000,
-    });
-    
-    if (!res.ok) {
-      const error = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
-      throw new Error(error.error || `HTTP ${res.status}`);
+    try {
+      console.log('[Firestore] Fetching:', url);
+      const res = await fetchWithTimeout(url, {
+        method: 'GET',
+        timeoutMs: 15000,
+      });
+      
+      console.log('[Firestore] Response status:', res.status, res.statusText);
+      
+      if (!res.ok) {
+        let errorText = '';
+        try {
+          const error = await res.json();
+          errorText = error.error || `HTTP ${res.status}`;
+          console.error('[Firestore] API error:', error);
+        } catch {
+          errorText = `HTTP ${res.status}`;
+          const text = await res.text();
+          console.error('[Firestore] Response text:', text.substring(0, 200));
+        }
+        throw new Error(errorText);
+      }
+      
+      const text = await res.text();
+      console.log('[Firestore] Response text (first 200 chars):', text.substring(0, 200));
+      
+      let json;
+      try {
+        json = JSON.parse(text);
+      } catch (parseError) {
+        console.error('[Firestore] JSON parse error:', parseError);
+        console.error('[Firestore] Full response:', text);
+        throw new Error('Ogiltigt JSON-svar från API');
+      }
+      
+      if (!json.success) {
+        console.error('[Firestore] API returned success=false:', json);
+        throw new Error(json.error || 'Okänt fel från API');
+      }
+      
+      console.log('[Firestore] Success:', json.data?.length || 'single item');
+      return json.data;
+    } catch (error) {
+      console.error('[Firestore] Fetch error:', error);
+      throw error;
     }
-    
-    const json = await res.json();
-    if (!json.success) {
-      throw new Error(json.error || 'Okänt fel från API');
-    }
-    
-    return json.data;
   });
 }
 
@@ -119,7 +157,24 @@ export async function queryCollection(args: QueryArgs): Promise<any[]> {
   if (args.collectionId === 'tutorials' && args.whereEq?.field === '__name__') {
     const value = args.whereEq.value;
     // Ta bort 'tutorials/' prefix om det finns
-    const id = value.startsWith('tutorials/') ? value.substring(11) : value;
+    let id: string;
+    const prefix = 'tutorials/';
+    if (value.startsWith(prefix)) {
+      id = value.substring(prefix.length);
+    } else {
+      id = value;
+    }
+    
+    // Validera att ID:t inte är tomt
+    if (!id || id.length === 0) {
+      console.error('[Firestore] Empty ID extracted from value:', value);
+      return [];
+    }
+    
+    if (import.meta.env.DEV) {
+      console.log('[Firestore] queryCollection - value:', value, 'extracted id:', id, 'id length:', id.length);
+    }
+    
     const data = await fetchFromPhpApi('tutorial.php', { id });
     return data ? [data] : []; // Returnera som array för kompatibilitet
   }
