@@ -31,5 +31,4 @@ try {
 } catch (Exception $e) {
   sendError('Fel vid hämtning av news: ' . $e->getMessage(), 500);
 }
-?>
 

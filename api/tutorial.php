@@ -35,13 +35,26 @@ try {
     
     $data = queryFirestore($structuredQuery);
     
+    // Firestore returnerar tom array [] om inget dokument hittas
     if (empty($data) || !isset($data[0])) {
-      sendError('Tutorial hittades inte', 404);
+      sendError('Tutorial hittades inte (inget resultat från Firestore)', 404);
+    }
+    
+    // Kontrollera om dokumentet faktiskt finns (Firestore kan returnera tom array eller array med tomt objekt)
+    if (!isset($data[0]['document'])) {
+      sendError('Tutorial hittades inte (dokument saknas i resultat)', 404);
     }
     
     $tutorial = normalizeTutorial($data[0]);
     if (!$tutorial) {
-      sendError('Kunde inte normalisera tutorial', 500);
+      // Debug: logga vad som faktiskt finns i data[0]
+      $docExists = isset($data[0]['document']);
+      $docName = $docExists ? ($data[0]['document']['name'] ?? 'NO NAME') : 'NO DOCUMENT';
+      $fields = $docExists ? ($data[0]['document']['fields'] ?? []) : [];
+      $postId = isset($fields['postId']) ? 'EXISTS' : 'MISSING';
+      $title = isset($fields['title']) ? 'EXISTS' : 'MISSING';
+      $id = $docExists && isset($data[0]['document']['name']) ? basename($data[0]['document']['name']) : 'NO ID';
+      sendError('Kunde inte normalisera tutorial. Debug: id=' . $id . ', postId=' . $postId . ', title=' . $title . ', docName=' . $docName, 500);
     }
     
     echo json_encode(['success' => true, 'data' => $tutorial], JSON_UNESCAPED_UNICODE);
@@ -61,13 +74,26 @@ try {
     
     $data = queryFirestore($structuredQuery);
     
+    // Firestore returnerar tom array [] om inget dokument hittas
     if (empty($data) || !isset($data[0])) {
-      sendError('Tutorial hittades inte', 404);
+      sendError('Tutorial hittades inte (inget resultat från Firestore)', 404);
+    }
+    
+    // Kontrollera om dokumentet faktiskt finns (Firestore kan returnera tom array eller array med tomt objekt)
+    if (!isset($data[0]['document'])) {
+      sendError('Tutorial hittades inte (dokument saknas i resultat)', 404);
     }
     
     $tutorial = normalizeTutorial($data[0]);
     if (!$tutorial) {
-      sendError('Kunde inte normalisera tutorial', 500);
+      // Debug: logga vad som faktiskt finns i data[0]
+      $docExists = isset($data[0]['document']);
+      $docName = $docExists ? ($data[0]['document']['name'] ?? 'NO NAME') : 'NO DOCUMENT';
+      $fields = $docExists ? ($data[0]['document']['fields'] ?? []) : [];
+      $postId = isset($fields['postId']) ? 'EXISTS' : 'MISSING';
+      $title = isset($fields['title']) ? 'EXISTS' : 'MISSING';
+      $id = $docExists && isset($data[0]['document']['name']) ? basename($data[0]['document']['name']) : 'NO ID';
+      sendError('Kunde inte normalisera tutorial. Debug: id=' . $id . ', postId=' . $postId . ', title=' . $title . ', docName=' . $docName, 500);
     }
     
     echo json_encode(['success' => true, 'data' => $tutorial], JSON_UNESCAPED_UNICODE);
@@ -75,5 +101,4 @@ try {
 } catch (Exception $e) {
   sendError('Fel vid hämtning av tutorial: ' . $e->getMessage(), 500);
 }
-?>
 

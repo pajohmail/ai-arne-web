@@ -31,5 +31,4 @@ try {
 } catch (Exception $e) {
   sendError('Fel vid hämtning av posts: ' . $e->getMessage(), 500);
 }
-?>
 

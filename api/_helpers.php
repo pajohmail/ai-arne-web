@@ -143,5 +143,4 @@ function queryFirestore($structuredQuery) {
   
   return $data;
 }
-?>
 
