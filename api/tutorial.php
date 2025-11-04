@@ -35,13 +35,19 @@ try {
     
     $data = queryFirestore($structuredQuery);
     
+    // Firestore returnerar tom array [] om inget dokument hittas
     if (empty($data) || !isset($data[0])) {
-      sendError('Tutorial hittades inte', 404);
+      sendError('Tutorial hittades inte (inget resultat från Firestore)', 404);
+    }
+    
+    // Kontrollera om dokumentet faktiskt finns (Firestore kan returnera tom array eller array med tomt objekt)
+    if (!isset($data[0]['document'])) {
+      sendError('Tutorial hittades inte (dokument saknas i resultat)', 404);
     }
     
     $tutorial = normalizeTutorial($data[0]);
     if (!$tutorial) {
-      sendError('Kunde inte normalisera tutorial', 500);
+      sendError('Kunde inte normalisera tutorial (saknade fält: id, postId eller title)', 500);
     }
     
     echo json_encode(['success' => true, 'data' => $tutorial], JSON_UNESCAPED_UNICODE);
@@ -61,13 +67,19 @@ try {
     
     $data = queryFirestore($structuredQuery);
     
+    // Firestore returnerar tom array [] om inget dokument hittas
     if (empty($data) || !isset($data[0])) {
-      sendError('Tutorial hittades inte', 404);
+      sendError('Tutorial hittades inte (inget resultat från Firestore)', 404);
+    }
+    
+    // Kontrollera om dokumentet faktiskt finns (Firestore kan returnera tom array eller array med tomt objekt)
+    if (!isset($data[0]['document'])) {
+      sendError('Tutorial hittades inte (dokument saknas i resultat)', 404);
     }
     
     $tutorial = normalizeTutorial($data[0]);
     if (!$tutorial) {
-      sendError('Kunde inte normalisera tutorial', 500);
+      sendError('Kunde inte normalisera tutorial (saknade fält: id, postId eller title)', 500);
     }
     
     echo json_encode(['success' => true, 'data' => $tutorial], JSON_UNESCAPED_UNICODE);

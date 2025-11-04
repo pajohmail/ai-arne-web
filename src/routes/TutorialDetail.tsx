@@ -17,15 +17,40 @@ export default function TutorialDetail() {
       try {
         setError(null);
         setLoading(true);
+        
+        // Validera att ID:t finns
+        if (!id) {
+          if (mounted) {
+            setError('Tutorial ID saknas i URL.');
+            setLoading(false);
+          }
+          return;
+        }
+        
+        // Debug: Logga ID:t för att se vad som faktiskt extraheras
+        if (import.meta.env.DEV) {
+          console.log('Tutorial ID från URL:', id);
+        }
+        
         // Firestore REST saknar direkt by-id i runQuery, så vi filtrar lokalt eller
         // använder where __name__ == 'tutorials/{id}'.
         const rows = await queryCollection({ collectionId: 'tutorials', whereEq: { field: '__name__', value: `tutorials/${id}` }, limit: 1 });
         const t = rows.map(mapTutorial).filter(Boolean)[0] || null;
-        if (mounted) setItem(t);
-      } catch {
-        setError('Kunde inte hämta tutorial.');
+        if (mounted) {
+          if (!t) {
+            setError(`Tutorial med ID "${id}" hittades inte.`);
+          } else {
+            setItem(t);
+          }
+        }
+      } catch (e: any) {
+        if (mounted) {
+          setError(e.message || 'Kunde inte hämta tutorial.');
+        }
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     })();
     return () => { mounted = false; };

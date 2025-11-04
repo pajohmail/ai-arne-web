@@ -76,11 +76,17 @@ export default function Home() {
           <EmptyState message="Inga tutorials hittades." />
         )}
         <div className="card-list">
-          {tutorials.map((t: any) => (
-            <article key={t.id} className="card">
-              <h3><Link to={`/tutorial/${t.id}`}>{t.title}</Link></h3>
-            </article>
-          ))}
+          {tutorials.map((t: any) => {
+            // Debug: Logga ID:t för att se vad som faktiskt används i länkar
+            if (import.meta.env.DEV) {
+              console.log('Tutorial ID för länk (Home):', t.id, 'Title:', t.title);
+            }
+            return (
+              <article key={t.id} className="card">
+                <h3><Link to={`/tutorial/${t.id}`}>{t.title}</Link></h3>
+              </article>
+            );
+          })}
         </div>
       </section>
     </div>

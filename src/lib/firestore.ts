@@ -59,6 +59,11 @@ async function fetchFromPhpApi(endpoint: string, params: Record<string, string |
   const url = `/api/${endpoint}${queryString ? '?' + queryString : ''}`;
   const key = `php:${url}`;
   
+  // Debug: Logga params och URL
+  if (import.meta.env.DEV && endpoint === 'tutorial.php') {
+    console.log('fetchFromPhpApi - params:', params, 'url:', url);
+  }
+  
   return getJsonCached(key, async () => {
     const res = await fetchWithTimeout(url, {
       method: 'GET',
@@ -67,12 +72,14 @@ async function fetchFromPhpApi(endpoint: string, params: Record<string, string |
     
     if (!res.ok) {
       const error = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
-      throw new Error(error.error || `HTTP ${res.status}`);
+      const errorMsg = error.error || `HTTP ${res.status}`;
+      throw new Error(errorMsg);
     }
     
     const json = await res.json();
     if (!json.success) {
-      throw new Error(json.error || 'Okänt fel från API');
+      const errorMsg = json.error || 'Okänt fel från API';
+      throw new Error(errorMsg);
     }
     
     return json.data;
@@ -118,8 +125,9 @@ export async function queryCollection(args: QueryArgs): Promise<any[]> {
   // Hämta tutorial via id (__name__ == 'tutorials/{id}')
   if (args.collectionId === 'tutorials' && args.whereEq?.field === '__name__') {
     const value = args.whereEq.value;
-    // Ta bort 'tutorials/' prefix om det finns
-    const id = value.startsWith('tutorials/') ? value.substring(11) : value;
+    // Ta bort 'tutorials/' prefix om det finns (10 tecken, inte 11!)
+    let id = value.startsWith('tutorials/') ? value.substring(10) : value;
+    
     const data = await fetchFromPhpApi('tutorial.php', { id });
     return data ? [data] : []; // Returnera som array för kompatibilitet
   }
