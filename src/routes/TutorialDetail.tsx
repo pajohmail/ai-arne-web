@@ -17,12 +17,17 @@ export default function TutorialDetail() {
       try {
         setError(null);
         setLoading(true);
+        
+        // Validera att ID:t finns
         if (!id) {
-          setError('Tutorial ID saknas i URL.');
-          setLoading(false);
+          if (mounted) {
+            setError('Tutorial ID saknas i URL.');
+            setLoading(false);
+          }
           return;
         }
         
+        // Debug: Logga ID:t för att se vad som faktiskt extraheras
         if (import.meta.env.DEV) {
           console.log('[TutorialDetail] Tutorial ID från URL:', id, 'length:', id.length);
           console.log('[TutorialDetail] Full value för queryCollection:', `tutorials/${id}`);
