@@ -8,3 +8,13 @@ public_html_*.env*/
 aiarne_old.png
 aiarne2.png
 
+# Cloud agents
+cloud/.env
+cloud/node_modules/
+cloud/dist/
+cloud/*.log
+cloud/test-results.txt
+cloud/firestore-test-results.txt
+cloud/database-test-results.txt
+cloud/tsconfig.tsbuildinfo
+

@@ -1,0 +1,28 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Posts collection - endast Cloud Functions kan skriva, alla kan läsa
+    match /posts/{postId} {
+      allow read: if true;  // Alla kan läsa posts
+      allow write: if false; // Endast Cloud Functions kan skriva (via service account)
+    }
+    
+    // Tutorials collection - endast Cloud Functions kan skriva, alla kan läsa
+    match /tutorials/{tutorialId} {
+      allow read: if true;  // Alla kan läsa tutorials
+      allow write: if false; // Endast Cloud Functions kan skriva (via service account)
+    }
+    
+    // News collection - endast Cloud Functions kan skriva, alla kan läsa
+    match /news/{newsId} {
+      allow read: if true;  // Alla kan läsa news
+      allow write: if false; // Endast Cloud Functions kan skriva (via service account)
+    }
+    
+    // User questions collection - endast Cloud Functions kan skriva, alla kan läsa
+    match /user_questions/{questionId} {
+      allow read: if true;  // Alla kan läsa sparade frågor
+      allow write: if false; // Endast Cloud Functions kan skriva (via service account)
+    }
+  }
+}

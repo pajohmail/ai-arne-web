@@ -4,5 +4,8 @@
 
 define('FIRESTORE_PROJECT_ID', 'ai-arne-agents');
 define('FIRESTORE_API_KEY', 'YOUR_FIREBASE_WEB_API_KEY'); // Hämta från Firebase Console -> Project Settings -> Web API Key
-?>
 
+// Cloud Function URL för chat (efter deployment)
+// Format: https://europe-north1-{PROJECT_ID}.cloudfunctions.net/chatHandler
+// Deployad: https://europe-north1-ai-arne-agents.cloudfunctions.net/chatHandler
+define('CHAT_FUNCTION_URL', 'https://europe-north1-ai-arne-agents.cloudfunctions.net/chatHandler');

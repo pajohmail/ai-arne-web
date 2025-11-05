@@ -16,6 +16,7 @@ export default function App({ children }: PropsWithChildren) {
             <NavLink to="/posts">API‑nyheter</NavLink>
             <NavLink to="/news">Nyheter</NavLink>
             <NavLink to="/tutorials">Tutorials</NavLink>
+            <NavLink to="/chat">Nyhets Chat</NavLink>
             <NavLink to="/om-mig">Om mig</NavLink>
             <NavLink to="/projekt">Projekt</NavLink>
           </nav>

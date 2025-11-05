@@ -1,0 +1,133 @@
+import { runApiNewsManager } from './agents/manager.js';
+import { runGeneralNewsManager } from './agents/generalNewsManager.js';
+import { createResponse } from './services/responses.js';
+import { saveUserQuestion } from './services/upsert.js';
+
+export async function apiNewsHandler(req: any, res: any) {
+  try {
+    const force = req.query?.force === '1' || req.body?.force === true;
+    const result = await runApiNewsManager({ force });
+    return res.status(200).json({ ok: true, ...result });
+  } catch (err: any) {
+    console.error(err);
+    return res.status(500).json({ ok: false, error: err?.message || 'unknown error' });
+  }
+}
+
+export async function generalNewsHandler(req: any, res: any) {
+  try {
+    const force = req.query?.force === '1' || req.body?.force === true;
+    const result = await runGeneralNewsManager({ force });
+    return res.status(200).json({ ok: true, ...result });
+  } catch (err: any) {
+    console.error(err);
+    return res.status(500).json({ ok: false, error: err?.message || 'unknown error' });
+  }
+}
+
+// Behåll för bakåtkompatibilitet - kör både API-nyheter och generella nyheter
+export async function managerHandler(req: any, res: any) {
+  try {
+    const force = req.query?.force === '1' || req.body?.force === true;
+    
+    // Kör både API-nyheter och generella nyheter
+    const [apiResult, generalResult] = await Promise.allSettled([
+      runApiNewsManager({ force }),
+      runGeneralNewsManager({ force })
+    ]);
+    
+    const apiNews = apiResult.status === 'fulfilled' ? apiResult.value : { processed: 0, error: apiResult.reason?.message };
+    const generalNews = generalResult.status === 'fulfilled' ? generalResult.value : { processed: 0, error: generalResult.reason?.message };
+    
+    return res.status(200).json({ 
+      ok: true, 
+      apiNews: apiNews,
+      generalNews: generalNews,
+      totalProcessed: (apiNews.processed || 0) + (generalNews.processed || 0)
+    });
+  } catch (err: any) {
+    console.error(err);
+    return res.status(500).json({ ok: false, error: err?.message || 'unknown error' });
+  }
+}
+
+/**
+ * Chat handler för att hantera användarfrågor om AI-nyheter
+ * Använder Responses API för att generera underhållande svar med ironi
+ */
+export async function chatHandler(req: any, res: any) {
+  try {
+    const { question, sessionId } = req.body || {};
+    
+    if (!question || typeof question !== 'string' || question.trim().length === 0) {
+      return res.status(400).json({ 
+        ok: false, 
+        error: 'Frågan saknas eller är ogiltig' 
+      });
+    }
+
+    const trimmedQuestion = question.trim();
+    
+    // Validera att frågan är AI-relaterad (enkel nyckelord-kontroll)
+    const aiKeywords = [
+      'ai', 'artificiell intelligens', 'machine learning', 'ml', 'neural', 
+      'openai', 'anthropic', 'claude', 'gpt', 'llm', 'modell', 'algoritm', 
+      'datascience', 'data science', 'cursor', 'github copilot', 'copilot',
+      'chatgpt', 'gemini', 'bard', 'claude ai', 'assistant', 'assistant api',
+      'responses api', 'langchain', 'vector', 'embedding', 'transformer',
+      'deep learning', 'neural network', 'nlp', 'natural language', 'prompt',
+      'fine-tuning', 'rag', 'retrieval', 'generation', 'ai tool', 'ai verktyg',
+      'ai editor', 'ai ide', 'code completion', 'autocomplete', 'ai agent',
+      'ai system', 'ai utveckling', 'ai nyhet', 'ai release', 'ai update'
+    ];
+    const questionLower = trimmedQuestion.toLowerCase();
+    const isAiRelated = aiKeywords.some(keyword => questionLower.includes(keyword));
+    
+    if (!isAiRelated) {
+      return res.status(400).json({ 
+        ok: false, 
+        error: 'Frågan måste vara relaterad till AI (artificiell intelligens). Försök igen med en AI-relaterad fråga.' 
+      });
+    }
+
+    // Skapa prompt med underhållande ton och ironi
+    const prompt = `Du är en AI-nyhetsexpert som svarar på frågor om AI-nyheter och utveckling på ett underhållande sätt med en touch av ironi och svenska humor. 
+    
+Frågan: ${trimmedQuestion}
+
+Svara på svenska med:
+- Ett engagerande och underhållande svar
+- En touch av ironi när det är lämpligt
+- Relevant information om AI-utveckling och nyheter
+- Om du inte vet något säkert, säg det öppet men fortsätt med en generell förklaring
+
+Håll svaret kortfattat (max 300 ord) men informativt.`;
+
+    // Använd Responses API för att generera svar
+    const response = await createResponse(prompt, {
+      model: 'gpt-4o',
+      maxTokens: 500,
+      temperature: 0.8 // Högre temperatur för mer kreativitet och humor
+    });
+
+    // Spara frågan i Firestore (inte svaret)
+    try {
+      await saveUserQuestion(trimmedQuestion, sessionId);
+    } catch (saveError) {
+      console.error('Failed to save question to Firestore:', saveError);
+      // Fortsätt ändå, sparandet är inte kritiskt
+    }
+
+    return res.status(200).json({ 
+      ok: true, 
+      answer: response.content,
+      provider: response.provider
+    });
+  } catch (err: any) {
+    console.error('Chat handler error:', err);
+    return res.status(500).json({ 
+      ok: false, 
+      error: err?.message || 'Ett fel uppstod vid generering av svar' 
+    });
+  }
+}

@@ -220,4 +220,62 @@ export function mapTutorial(row: any): TutorialDoc | undefined {
   return undefined;
 }
 
+export interface UserQuestionDoc {
+  id: string;
+  question: string;
+  sessionId?: string;
+  createdAt?: TimestampLike;
+}
+
+export interface ChatResponse {
+  answer: string;
+  provider: 'openai' | 'anthropic' | 'unknown';
+}
+
+/**
+ * Skicka en fråga till chat-API:et
+ */
+export async function sendChatMessage(question: string, sessionId?: string): Promise<ChatResponse> {
+  const url = '/api/chat.php';
+  
+  try {
+    const res = await fetchWithTimeout(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ question, sessionId }),
+      timeoutMs: 30000, // 30 sekunder timeout för AI-svar
+    });
+    
+    if (!res.ok) {
+      let errorText = '';
+      try {
+        const error = await res.json();
+        errorText = error.error || `HTTP ${res.status}`;
+      } catch {
+        errorText = `HTTP ${res.status}`;
+      }
+      throw new Error(errorText);
+    }
+    
+    const json = await res.json();
+    if (!json.success) {
+      throw new Error(json.error || 'Okänt fel från API');
+    }
+    
+    return json.data;
+  } catch (error: any) {
+    console.error('[Chat] Error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Hämta sparade frågor
+ */
+export async function getSavedQuestions(limit: number = 20): Promise<UserQuestionDoc[]> {
+  return fetchFromPhpApi('user-questions.php', { limit });
+}
+
 

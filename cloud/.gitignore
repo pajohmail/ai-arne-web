@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+dist/
+
+# Environment variables
+.env
+
+# Test results
+test-results.txt
+firestore-test-results.txt
+
+# Google Cloud credentials
+*.json
+service-account-*.json
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS generated files
+.DS_Store
+Thumbs.db

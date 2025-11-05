@@ -12,6 +12,7 @@ const News = React.lazy(() => import('./routes/News'));
 const NewsDetail = React.lazy(() => import('./routes/NewsDetail'));
 const TutorialDetail = React.lazy(() => import('./routes/TutorialDetail'));
 const Tutorials = React.lazy(() => import('./routes/Tutorials'));
+const Chat = React.lazy(() => import('./routes/Chat'));
 const PrivacyPolicy = React.lazy(() => import('./routes/PrivacyPolicy'));
 const About = React.lazy(() => import('./routes/About'));
 const Projects = React.lazy(() => import('./routes/Projects'));
@@ -61,6 +62,7 @@ function Bootstrap() {
             <Route path="/news/:slug" element={<NewsDetail />} />
             <Route path="/tutorials" element={<Tutorials />} />
             <Route path="/tutorial/:id" element={<TutorialDetail />} />
+            <Route path="/chat" element={<Chat />} />
             <Route path="/om-mig" element={<About />} />
             <Route path="/projekt" element={<Projects />} />
             <Route path="/projekt/matte-professorn" element={<MatteProfessorn />} />

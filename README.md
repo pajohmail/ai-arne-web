@@ -97,6 +97,32 @@ Alla endpoints returnerar JSON med `{ success: true, data: ... }` eller `{ succe
 - Hämta post/news via `where slug == <param>`
 - Hämta tutorial via `where postId == <post.id>` eller `where __name__ == 'tutorials/<id>'`
 
+## Cloud Agents
+
+Denna webbplats drivs av ett molnbaserat AI-agent-system som genererar innehåll (posts, news, tutorials) och skriver till Firestore. Agenter finns i `cloud/`-mappen.
+
+### Cloud Agentsystem
+
+- **API-nyhetsagent**: Övervakar API-nyheter från Anthropic, OpenAI och Google AI
+- **RSS-nyhetsagent**: Hämtar allmänna AI-nyheter från RSS-feeds med fokus på utveckling
+  - Använder OpenAI Responses API för AI-baserad sammanfattning och filtrering
+  - Fallback till Anthropic API om OpenAI saknas
+- **Tutorial-agent**: Skapar AI-genererade tutorials för API-nyheter via Responses API
+
+Agenterna körs på Google Cloud Functions och deployas via gcloud CLI. Se `cloud/README.md` för detaljerad dokumentation om agenter, deployment och Responses API-implementation.
+
+### Arkitektur
+
+```
+Cloud Functions (Node.js agenter)
+    ↓
+Firestore (NoSQL databas)
+    ↓
+PHP-proxy (read-only)
+    ↓
+React-webbapp (visar innehåll)
+```
+
 ## Övrigt
 - SEO: `Seo`-komponent sätter `<title>`, meta description och canonical (från `publicBaseUrl` + hash‑URL)
 - Säkerhet: HTML saneras med DOMPurify

@@ -1,14 +1,15 @@
 <?php
 // Gemensamma hjälpfunktioner för PHP API-endpoints
 
-function sendCorsHeaders() {
+function sendCorsHeaders($allowPost = false) {
   $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
   $allowed = ['http://localhost:5173', 'https://ai-arne.se', 'https://www.ai-arne.se'];
   
   if (in_array($origin, $allowed, true)) {
     header("Access-Control-Allow-Origin: $origin");
   }
-  header('Access-Control-Allow-Methods: GET, OPTIONS');
+  $methods = $allowPost ? 'GET, POST, OPTIONS' : 'GET, OPTIONS';
+  header("Access-Control-Allow-Methods: $methods");
   header('Access-Control-Allow-Headers: Content-Type');
   header('Content-Type: application/json; charset=utf-8');
   
@@ -105,6 +106,25 @@ function normalizeTutorial($row) {
     'sourceUrl' => getField($fields, 'sourceUrl'),
     'createdAt' => getField($fields, 'createdAt'),
     'updatedAt' => getField($fields, 'updatedAt'),
+  ];
+}
+
+function normalizeUserQuestion($row) {
+  if (!isset($row['document'])) return null;
+  $doc = $row['document'];
+  $fields = $doc['fields'] ?? [];
+  $name = $doc['name'] ?? '';
+  $id = basename($name);
+  
+  $question = getField($fields, 'question');
+  
+  if (!$id || !$question) return null;
+  
+  return [
+    'id' => $id,
+    'question' => $question,
+    'sessionId' => getField($fields, 'sessionId'),
+    'createdAt' => getField($fields, 'createdAt'),
   ];
 }
 
