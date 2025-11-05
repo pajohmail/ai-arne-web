@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { isWithinLastWeek } from '../utils/time.js';
 
 export type ProviderRelease = {
   provider: 'openai' | 'google' | 'anthropic' | 'mistral' | 'perplexity' | 'other';
@@ -55,8 +56,12 @@ async function fetchAnthropic(): Promise<ProviderRelease[]> {
 
 export async function checkProviders(): Promise<ProviderRelease[]> {
   const results = await Promise.allSettled([fetchOpenAI(), fetchGoogle(), fetchAnthropic()]);
-  return results
+  const allReleases = results
     .filter(r => r.status === 'fulfilled')
-    .flatMap((r: PromiseFulfilledResult<ProviderRelease[]>) => r.value)
-    .sort((a, b) => +new Date(b.publishedAt) - +new Date(a.publishedAt));
+    .flatMap((r: PromiseFulfilledResult<ProviderRelease[]>) => r.value);
+  
+  // Filtrera endast releases från senaste veckan
+  const recentReleases = allReleases.filter(release => isWithinLastWeek(release.publishedAt));
+  
+  return recentReleases.sort((a, b) => +new Date(b.publishedAt) - +new Date(a.publishedAt));
 }

@@ -2,6 +2,7 @@ import Parser from 'rss-parser';
 import { sanitizeHtml } from '../utils/text.js';
 import { upsertGeneralNews } from '../services/upsert.js';
 import { createResponse } from '../services/responses.js';
+import { isWithinLastWeek } from '../utils/time.js';
 
 const parser = new Parser();
 
@@ -90,6 +91,20 @@ export function filterForDevelopmentFocus(item: RSSFeedItem): boolean {
 }
 
 /**
+ * Filtrerar nyheter baserat på publiceringsdatum - endast nyheter från senaste veckan
+ */
+export function filterByDate(item: RSSFeedItem): boolean {
+  // Försök först med isoDate (ISO 8601 format), sedan pubDate
+  const dateStr = item.isoDate || item.pubDate;
+  if (!dateStr) {
+    // Om inget datum finns, exkludera (säkerhetsprincip)
+    return false;
+  }
+  
+  return isWithinLastWeek(dateStr);
+}
+
+/**
  * Använder OpenAI Responses API för att sammanfatta och verifiera utvecklingsfokus
  * Fallback till Anthropic om OpenAI API-nyckel saknas eller misslyckas
  * Fallback till enkel sammanfattning om inga API-nycklar finns
@@ -97,28 +112,29 @@ export function filterForDevelopmentFocus(item: RSSFeedItem): boolean {
 export async function summarizeWithAI(item: RSSFeedItem, source: string): Promise<ProcessedNewsItem | null> {
   const content = item.contentSnippet || item.content || '';
   const prompt = `Du är en AI-nyhetsredigerare som fokuserar på AI-utveckling och programmering. Skriv på ett underhållande sätt med en touch av ironi och svenska humor när det är lämpligt.
-Kontrollera följande nyhet och skapa en kort sammanfattning på svenska (max 300 ord) som fokuserar på utvecklingsaspekter.
+
+Kontrollera följande nyhet och skapa en detaljerad artikel på svenska som fokuserar på utvecklingsaspekter. Sök efter mer information online för att komplettera artikeln med relevanta källor, bakgrundsinformation och sammanhang.
 
 Om nyheten handlar om bildgenerering, videogenerering, eller visuella AI-tjänster som inte är relevanta för utveckling, returnera enbart "SKIP".
 
 Nyhetstitel: ${item.title}
 Innehåll: ${content.substring(0, 2000)}
 
-Skapa en kort artikel på svenska med:
+Skapa en längre, mer detaljerad artikel på svenska med:
 - Titel (behåll originaltiteln om den är relevant)
-- En kort sammanfattning (2-3 meningar, max 200 ord) - underhållande men informativ
-- Huvudinnehåll (3-5 meningar, max 300 ord) - engagerande med en touch av ironi när det passar
+- En sammanfattning (4-6 meningar) - underhållande men informativ, med ironisk touch
+- Huvudinnehåll (8-12 meningar) - engagerande med en touch av ironi när det passar, inkludera relevanta källor, bakgrundsinformation och sammanhang. Var inte rädd för att vara detaljerad och inkludera exempel och jämförelser.
 
 Format:
 TITEL: [titel]
-SAMMANFATTNING: [kort sammanfattning]
+SAMMANFATTNING: [sammanfattning]
 INNEHÅLL: [huvudinnehåll]`;
 
   try {
     // Använd Responses API med fallback till Anthropic
     const response = await createResponse(prompt, {
-      model: 'gpt-4o',
-      maxTokens: 1000,
+      model: 'gpt-5-mini',
+      maxTokens: 2500,
       temperature: 0.7
     });
 
@@ -184,7 +200,12 @@ export async function processAndUpsertNews(items: RSSFeedItem[], source: string)
   let processed = 0;
 
   for (const item of items) {
-    // Första filtreringen med nyckelord
+    // Filtrera först baserat på datum - endast nyheter från senaste veckan
+    if (!filterByDate(item)) {
+      continue;
+    }
+
+    // Sedan filtrera med nyckelord
     if (!filterForDevelopmentFocus(item)) {
       continue;
     }

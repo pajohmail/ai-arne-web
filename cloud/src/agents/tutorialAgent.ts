@@ -14,26 +14,29 @@ export async function createOrUpdateTutorial(postId: string, release: ProviderRe
   let html: string;
   
   try {
-    const prompt = `Du är en teknisk skribent som skapar tutorials för utvecklare. Skapa en tutorial-guide på svenska för följande API-release. Skriv på ett underhållande sätt med en touch av ironi och svenska humor när det passar, men håll det fortfarande tydligt och pedagogiskt.
+    const prompt = `Du är en teknisk skribent som skapar tutorials för utvecklare. Skapa en detaljerad tutorial-guide på svenska för följande API-release. Skriv på ett underhållande sätt med en touch av ironi och svenska humor när det passar, men håll det fortfarande tydligt och pedagogiskt.
+
+Sök efter mer information online för att komplettera tutorialen med relevanta exempel, bästa praxis, och länkar till dokumentation och resurser.
 
 Provider: ${release.provider}
 Release: ${release.name}${release.version ? ' ' + release.version : ''}
 URL: ${release.url}
 Sammanfattning: ${release.summary || 'Ingen sammanfattning tillgänglig'}
 
-Skapa en tutorial med följande struktur:
-1. En kort introduktion som förklarar vad denna release är (engagerande och underhållande)
-2. Förutsättningar (konto, API-nyckel, Node.js version, etc.)
-3. Installation (npm/bun/yarn kommandon)
-4. Exempelkod som visar hur man använder API:et
-5. Ytterligare resurser eller länkar
+Skapa en längre, mer detaljerad tutorial med följande struktur:
+1. En introduktion som förklarar vad denna release är, varför den är viktig, och vilka problem den löser (engagerande och underhållande med ironisk touch)
+2. Förutsättningar (konto, API-nyckel, Node.js version, etc.) - var detaljerad
+3. Installation (npm/bun/yarn kommandon) - inkludera flera alternativ och troubleshooting
+4. Exempelkod som visar hur man använder API:et - inkludera flera exempel med olika use cases
+5. Ytterligare resurser eller länkar - inkludera dokumentation, community-resurser, och relaterade tutorials
+6. Bästa praxis och tips - inkludera vanliga misstag och hur man undviker dem
 
 Formatera innehållet som HTML med h2, h3, p, ul, pre, code tags. Använd svenska språket.
-Var tydlig, pedagogisk och underhållande med en touch av ironi när det är lämpligt.`;
+Var tydlig, pedagogisk och underhållande med en touch av ironi när det är lämpligt. Var inte rädd för att vara detaljerad - läsaren vill ha en komplett guide.`;
 
     const response = await createResponse(prompt, {
-      model: 'gpt-4o',
-      maxTokens: 1500,
+      model: 'gpt-5-mini',
+      maxTokens: 3000,
       temperature: 0.7
     });
 

@@ -119,20 +119,21 @@ async function fetchFromPhpApi(endpoint: string, params: Record<string, string |
 
 export async function queryCollection(args: QueryArgs): Promise<any[]> {
   const limit = args.limit ?? 10;
+  const offset = args.offset ?? 0;
   
   // Hämta lista av posts
   if (args.collectionId === 'posts' && !args.whereEq && args.orderByCreatedAtDesc) {
-    return fetchFromPhpApi('posts.php', { limit });
+    return fetchFromPhpApi('posts.php', { limit, offset });
   }
   
   // Hämta lista av news
   if (args.collectionId === 'news' && !args.whereEq && args.orderByCreatedAtDesc) {
-    return fetchFromPhpApi('news.php', { limit });
+    return fetchFromPhpApi('news.php', { limit, offset });
   }
   
   // Hämta lista av tutorials
   if (args.collectionId === 'tutorials' && !args.whereEq && args.orderByCreatedAtDesc) {
-    return fetchFromPhpApi('tutorials.php', { limit });
+    return fetchFromPhpApi('tutorials.php', { limit, offset });
   }
   
   // Hämta post via slug

@@ -78,7 +78,7 @@ Svara ENDAST med "JA" eller "NEJ" utan någon förklaring.`;
 
       try {
         const validationResponse = await createResponse(validationPrompt, {
-          model: 'gpt-4o',
+          model: 'gpt-5-mini',
           maxTokens: 10,
           temperature: 0.1
         });
@@ -105,21 +105,22 @@ Svara ENDAST med "JA" eller "NEJ" utan någon förklaring.`;
 
     // Skapa prompt med underhållande ton och ironi
     const prompt = `Du är en AI-nyhetsexpert som svarar på frågor om AI-nyheter och utveckling på ett underhållande sätt med en touch av ironi och svenska humor. 
-    
+
 Frågan: ${trimmedQuestion}
 
 Svara på svenska med:
-- Ett engagerande och underhållande svar
-- En touch av ironi när det är lämpligt
-- Relevant information om AI-utveckling och nyheter
-- Om du inte vet något säkert, säg det öppet men fortsätt med en generell förklaring
+- Ett engagerande och underhållande svar med en tydlig ironisk touch
+- En detaljerad och informativ förklaring baserat på aktuell information
+- Sök efter mer information online och inkludera relevanta källor och bakgrundsinformation
+- Relevant information om AI-utveckling och nyheter, inklusive kontext och historik när det är lämpligt
+- Om du inte vet något säkert, säg det öppet men fortsätt med en grundlig förklaring baserad på generell kunskap
 
-Håll svaret kortfattat (max 300 ord) men informativt.`;
+Skriv en längre, mer detaljerad artikel (500-800 ord) som är både informativ och underhållande. Var inte rädd för att vara långrandig - läsaren vill ha djupgående information. Inkludera exempel, jämförelser och relevanta sammanhang.`;
 
     // Använd Responses API för att generera svar
     const response = await createResponse(prompt, {
-      model: 'gpt-4o',
-      maxTokens: 500,
+      model: 'gpt-5-mini',
+      maxTokens: 2000,
       temperature: 0.8 // Högre temperatur för mer kreativitet och humor
     });
 

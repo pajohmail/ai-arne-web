@@ -36,7 +36,7 @@ export async function createResponse(
       // Använd Responses API (beta endpoint)
       // Responses API är tillståndsbevarande och stödjer verktyg
       const response = await openai.chat.completions.create({
-        model: options.model || 'gpt-4o',
+        model: options.model || 'gpt-5-mini',
         messages: [
           {
             role: 'user',
@@ -118,7 +118,7 @@ export async function createResponseWithContext(
       ];
 
       const response = await openai.chat.completions.create({
-        model: options.model || 'gpt-4o',
+        model: options.model || 'gpt-5-mini',
         messages: messages.map(msg => ({
           role: msg.role,
           content: msg.content
