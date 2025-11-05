@@ -46,7 +46,8 @@ export default function Chat() {
   async function loadSavedQuestions() {
     setLoadingQuestions(true);
     try {
-      const questions = await getSavedQuestions(20);
+      // Hämta alla sparade frågor (max 100 från API)
+      const questions = await getSavedQuestions(100);
       setSavedQuestions(questions);
     } catch (err) {
       console.error('Failed to load saved questions:', err);
@@ -126,41 +127,51 @@ export default function Chat() {
         Ställ frågor om AI-nyheter, teknologi och tech-företag. T.ex. "Microsoft och deras AI-tankar om framtiden" eller "Vad är nytt inom OpenAI?".
       </p>
 
-      {/* Sparade frågor */}
-      {savedQuestions.length > 0 && (
-        <div className="card">
-          <h2>Sparade frågor</h2>
-          <p className="muted">Klicka på en fråga för att ställa den igen</p>
-          <ul style={{ listStyle: 'none', padding: 0 }}>
-            {savedQuestions.slice(0, 10).map((q) => (
-              <li key={q.id} style={{ marginBottom: '0.5rem' }}>
-                <button
-                  type="button"
-                  onClick={() => handleQuestionClick(q)}
-                  style={{
-                    background: 'none',
-                    border: '1px solid #ccc',
-                    borderRadius: '4px',
-                    padding: '0.5rem 1rem',
-                    cursor: 'pointer',
-                    width: '100%',
-                    textAlign: 'left',
-                    transition: 'background-color 0.2s',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#f5f5f5';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                  }}
-                >
-                  {q.question}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      {/* Dropdown för tidigare sökningar */}
+      <div className="card">
+        <label htmlFor="previous-questions" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
+          Tidigare sökningar:
+        </label>
+        <select
+          id="previous-questions"
+          onChange={(e) => {
+            const selectedIndex = e.target.selectedIndex;
+            if (selectedIndex > 0 && savedQuestions.length > 0) { // Ignorera första option (placeholder)
+              const selectedQuestion = savedQuestions[selectedIndex - 1];
+              if (selectedQuestion) {
+                handleQuestionClick(selectedQuestion);
+                // Reset dropdown till placeholder
+                e.target.value = '';
+              }
+            }
+          }}
+          defaultValue=""
+          style={{
+            width: '100%',
+            padding: '0.75rem',
+            border: '1px solid #ccc',
+            borderRadius: '4px',
+            fontSize: '1rem',
+            fontFamily: 'inherit',
+            backgroundColor: 'white',
+            cursor: savedQuestions.length > 0 ? 'pointer' : 'not-allowed',
+          }}
+          disabled={loading || loadingQuestions || savedQuestions.length === 0}
+        >
+          <option value="" disabled>
+            {loadingQuestions 
+              ? 'Laddar tidigare sökningar...' 
+              : savedQuestions.length === 0 
+                ? 'Inga tidigare sökningar än' 
+                : `Välj en tidigare sökning (${savedQuestions.length} sparade)`}
+          </option>
+          {savedQuestions.map((q) => (
+            <option key={q.id} value={q.id}>
+              {q.question.length > 80 ? `${q.question.substring(0, 80)}...` : q.question}
+            </option>
+          ))}
+        </select>
+      </div>
 
       {/* Chat-formulär */}
       <form onSubmit={handleSubmit} className="card">

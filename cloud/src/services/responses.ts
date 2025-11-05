@@ -28,6 +28,8 @@ export async function createResponse(
   const openaiApiKey = process.env.OPENAI_API_KEY;
   const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
 
+  let openaiErrorMsg: string | null = null;
+
   // Försök först med OpenAI Responses API
   if (openaiApiKey) {
     try {
@@ -36,7 +38,7 @@ export async function createResponse(
       // Använd Responses API (beta endpoint)
       // Responses API är tillståndsbevarande och stödjer verktyg
       const response = await openai.chat.completions.create({
-        model: options.model || 'gpt-5-mini',
+        model: options.model || 'gpt-4o-mini', // Default fallback - kan ändras till gpt-5-mini om det stöds
         messages: [
           {
             role: 'user',
@@ -55,8 +57,18 @@ export async function createResponse(
           provider: 'openai'
         };
       }
-    } catch (error) {
-      console.error('OpenAI Responses API failed, falling back to Anthropic:', error);
+    } catch (error: any) {
+      const errorDetails = {
+        message: error?.message || 'Unknown error',
+        status: error?.status,
+        statusCode: error?.statusCode,
+        response: error?.response?.data || error?.error,
+        code: error?.code,
+        type: error?.type,
+        fullError: JSON.stringify(error, Object.getOwnPropertyNames(error))
+      };
+      openaiErrorMsg = errorDetails.message;
+      console.error('OpenAI Responses API failed, falling back to Anthropic:', errorDetails);
       // Fall through till Anthropic fallback
     }
   }
@@ -83,9 +95,20 @@ export async function createResponse(
           provider: 'anthropic'
         };
       }
-    } catch (error) {
-      console.error('Anthropic API also failed:', error);
-      throw new Error('Both OpenAI and Anthropic API calls failed');
+    } catch (error: any) {
+      const anthropicErrorDetails = {
+        message: error?.message || 'Unknown error',
+        status: error?.status,
+        statusCode: error?.statusCode,
+        response: error?.response?.data || error?.error,
+        code: error?.code,
+        type: error?.type
+      };
+      console.error('Anthropic API also failed:', anthropicErrorDetails);
+      const errorMsg = openaiErrorMsg 
+        ? `Both OpenAI and Anthropic API calls failed. OpenAI error: ${openaiErrorMsg}. Anthropic error: ${anthropicErrorDetails.message || 'Unknown'}`
+        : `Both OpenAI and Anthropic API calls failed. Anthropic error: ${anthropicErrorDetails.message || 'Unknown'}`;
+      throw new Error(errorMsg);
     }
   }
 

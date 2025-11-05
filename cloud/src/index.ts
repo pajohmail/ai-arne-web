@@ -141,9 +141,17 @@ Skriv en längre, mer detaljerad artikel (MINST 500 ord, gärna 600-800 ord) som
     });
   } catch (err: any) {
     console.error('Chat handler error:', err);
+    const errorMessage = err?.message || 'Ett fel uppstod vid generering av svar';
+    const errorDetails = {
+      message: errorMessage,
+      stack: err?.stack,
+      fullError: JSON.stringify(err, Object.getOwnPropertyNames(err))
+    };
+    console.error('Chat handler error details:', errorDetails);
     return res.status(500).json({ 
       ok: false, 
-      error: err?.message || 'Ett fel uppstod vid generering av svar' 
+      error: errorMessage,
+      details: process.env.NODE_ENV === 'development' ? errorDetails : undefined
     });
   }
 }

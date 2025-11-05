@@ -4,8 +4,8 @@ require_once __DIR__ . '/_helpers.php';
 
 sendCorsHeaders();
 
-$limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 20;
-$limit = max(1, min($limit, 100)); // Begränsa mellan 1 och 100
+$limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 100;
+$limit = max(1, min($limit, 200)); // Begränsa mellan 1 och 200 för att visa alla frågor
 
 $structuredQuery = [
   'from' => [['collectionId' => 'user_questions']],
