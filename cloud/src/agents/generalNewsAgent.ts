@@ -111,7 +111,7 @@ export function filterByDate(item: RSSFeedItem): boolean {
  */
 export async function summarizeWithAI(item: RSSFeedItem, source: string): Promise<ProcessedNewsItem | null> {
   const content = item.contentSnippet || item.content || '';
-  const prompt = `Du är en AI-nyhetsredigerare som fokuserar på AI-utveckling och programmering. Skriv på ett underhållande sätt med en touch av ironi och svenska humor när det är lämpligt.
+  const prompt = `Du är en AI-nyhetsredigerare som fokuserar på AI-utveckling och programmering. Skriv på ett underhållande sätt med en tydlig touch av ironi och svenska humor. Använd ironi och svenska humor flitigt genom hela artikeln.
 
 Kontrollera följande nyhet och skapa en detaljerad artikel på svenska som fokuserar på utvecklingsaspekter. Sök efter mer information online för att komplettera artikeln med relevanta källor, bakgrundsinformation och sammanhang.
 
@@ -120,22 +120,26 @@ Om nyheten handlar om bildgenerering, videogenerering, eller visuella AI-tjänst
 Nyhetstitel: ${item.title}
 Innehåll: ${content.substring(0, 2000)}
 
+VIKTIGT: Skriv MINST 600 ord totalt. Var inte kortfattad. Undvik korta svar. Var detaljerad och utförlig.
+
 Skapa en längre, mer detaljerad artikel på svenska med:
 - Titel (behåll originaltiteln om den är relevant)
-- En sammanfattning (4-6 meningar) - underhållande men informativ, med ironisk touch
-- Huvudinnehåll (8-12 meningar) - engagerande med en touch av ironi när det passar, inkludera relevanta källor, bakgrundsinformation och sammanhang. Var inte rädd för att vara detaljerad och inkludera exempel och jämförelser.
+- En sammanfattning (MINST 100 ord, 6-10 meningar) - underhållande men informativ, med tydlig ironisk touch och svenska humor
+- Huvudinnehåll (MINST 500 ord, 15-25 meningar) - engagerande med en tydlig touch av ironi genom hela texten, inkludera relevanta källor, bakgrundsinformation och sammanhang. Var inte rädd för att vara detaljerad och inkludera exempel, jämförelser och anekdoter. Använd ironi och svenska humor flitigt.
 
 Format:
 TITEL: [titel]
-SAMMANFATTNING: [sammanfattning]
-INNEHÅLL: [huvudinnehåll]`;
+SAMMANFATTNING: [sammanfattning - MINST 100 ord]
+INNEHÅLL: [huvudinnehåll - MINST 500 ord]
+
+Var underhållande och engagerande - läsaren ska vilja läsa hela artikeln.`;
 
   try {
     // Använd Responses API med fallback till Anthropic
     const response = await createResponse(prompt, {
       model: 'gpt-5-mini',
       maxTokens: 2500,
-      temperature: 0.7
+      temperature: 0.8 // Ökad temperatur för mer kreativitet och humor
     });
 
     const responseText = response.content;

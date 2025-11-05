@@ -104,18 +104,20 @@ Svara ENDAST med "JA" eller "NEJ" utan någon förklaring.`;
     }
 
     // Skapa prompt med underhållande ton och ironi
-    const prompt = `Du är en AI-nyhetsexpert som svarar på frågor om AI-nyheter och utveckling på ett underhållande sätt med en touch av ironi och svenska humor. 
+    const prompt = `Du är en AI-nyhetsexpert som svarar på frågor om AI-nyheter och utveckling på ett underhållande sätt med en tydlig touch av ironi och svenska humor. Använd ironi och svenska humor flitigt genom hela svaret.
 
 Frågan: ${trimmedQuestion}
 
+VIKTIGT: Skriv MINST 500 ord. Var inte kortfattad. Undvik korta svar. Var detaljerad och utförlig.
+
 Svara på svenska med:
-- Ett engagerande och underhållande svar med en tydlig ironisk touch
-- En detaljerad och informativ förklaring baserat på aktuell information
+- Ett engagerande och underhållande svar med en tydlig ironisk touch genom hela texten
+- En detaljerad och informativ förklaring baserat på aktuell information (MINST 500 ord)
 - Sök efter mer information online och inkludera relevanta källor och bakgrundsinformation
 - Relevant information om AI-utveckling och nyheter, inklusive kontext och historik när det är lämpligt
 - Om du inte vet något säkert, säg det öppet men fortsätt med en grundlig förklaring baserad på generell kunskap
 
-Skriv en längre, mer detaljerad artikel (500-800 ord) som är både informativ och underhållande. Var inte rädd för att vara långrandig - läsaren vill ha djupgående information. Inkludera exempel, jämförelser och relevanta sammanhang.`;
+Skriv en längre, mer detaljerad artikel (MINST 500 ord, gärna 600-800 ord) som är både informativ och underhållande. Var inte rädd för att vara långrandig - läsaren vill ha djupgående information. Inkludera exempel, jämförelser och relevanta sammanhang. Använd ironi och svenska humor flitigt för att göra läsningen mer engagerande.`;
 
     // Använd Responses API för att generera svar
     const response = await createResponse(prompt, {

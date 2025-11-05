@@ -1,6 +1,7 @@
 import { withFirestore, serverTimestamp, withRetry } from './firestore.js';
 import { COLLECTIONS } from './schema.js';
 import { slugify, sanitizeHtml } from '../utils/text.js';
+import { createResponse } from '../services/responses.js';
 
 export interface UpsertNewsArgs {
   provider: string;
@@ -18,16 +19,63 @@ export interface UpsertGeneralNewsArgs {
   source: string;
 }
 
+/**
+ * Genererar AI-baserat innehåll för API-nyheter
+ */
+async function generatePostContentWithAI(release: UpsertNewsArgs): Promise<string> {
+  const title = `[${release.provider.toUpperCase()}] ${release.name}${release.version ? ' ' + release.version : ''}`;
+  
+  const prompt = `Du är en AI-nyhetsskribent som skriver om AI-API-utveckling. Skapa en detaljerad artikel på svenska om följande API-release. Skriv på ett underhållande sätt med en tydlig touch av ironi och svenska humor. Använd ironi och svenska humor flitigt genom hela artikeln.
+
+Provider: ${release.provider}
+Release: ${release.name}${release.version ? ' ' + release.version : ''}
+URL: ${release.url}
+Sammanfattning: ${release.summary || 'Ingen sammanfattning tillgänglig'}
+
+VIKTIGT: Skriv MINST 500 ord. Var inte kortfattad. Undvik korta svar. Var detaljerad och utförlig.
+
+Skapa en underhållande och engagerande artikel på svenska med:
+- En introduktion som förklarar vad denna release är och varför den är viktig (med ironisk touch)
+- En detaljerad förklaring av vad som är nytt och vad det betyder för utvecklare
+- Kontext och bakgrundsinformation om varför denna release är relevant
+- Exempel på användningsfall och potentiella fördelar
+- Jämförelser med tidigare versioner eller konkurrenter när det är relevant
+- En avslutning som sammanfattar vikten av denna release
+
+Formatera innehållet som HTML med p, h2, h3, ul, li tags. Använd svenska språket.
+Var underhållande och engagerande - läsaren ska vilja läsa hela artikeln. Använd ironi och svenska humor flitigt genom hela texten.`;
+
+  try {
+    const response = await createResponse(prompt, {
+      model: 'gpt-5-mini',
+      maxTokens: 2500,
+      temperature: 0.8 // Högre temperatur för mer kreativitet och humor
+    });
+
+    console.log(`Post content generated with ${response.provider} API`);
+    
+    const aiContent = sanitizeHtml(response.content);
+    return `<p><strong>${title}</strong></p>${aiContent}\n<p>Källa: <a href="${sanitizeHtml(release.url)}" rel="noopener" target="_blank">${sanitizeHtml(release.url)}</a></p>`;
+  } catch (error) {
+    console.error(`Failed to generate post content with AI, using fallback:`, error);
+    
+    // Fallback till manuellt innehåll om AI misslyckas
+    return sanitizeHtml(
+      [
+        `<p><strong>${title}</strong></p>`,
+        `<p>${release.summary}</p>`,
+        `<p>Källa: <a href="${release.url}" rel="noopener" target="_blank">${release.url}</a></p>`
+      ].join('')
+    );
+  }
+}
+
 export async function upsertPostFromRelease(release: UpsertNewsArgs) {
   const slug = slugify(`${release.provider}-${release.name}-${release.version || ''}`);
   const title = `[${release.provider.toUpperCase()}] ${release.name}${release.version ? ' ' + release.version : ''}`;
-  const content = sanitizeHtml(
-    [
-      `<p><strong>${title}</strong></p>`,
-      `<p>${release.summary}</p>`,
-      `<p>Källa: <a href="${release.url}" rel="noopener" target="_blank">${release.url}</a></p>`
-    ].join('')
-  );
+  
+  // Generera innehåll med AI
+  const content = await generatePostContentWithAI(release);
 
   return await withFirestore(async (db) => {
     const postsRef = db.collection(COLLECTIONS.posts);
