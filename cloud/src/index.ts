@@ -68,25 +68,38 @@ export async function chatHandler(req: any, res: any) {
 
     const trimmedQuestion = question.trim();
     
-    // Validera att frågan är AI-relaterad (enkel nyckelord-kontroll)
-    const aiKeywords = [
-      'ai', 'artificiell intelligens', 'machine learning', 'ml', 'neural', 
-      'openai', 'anthropic', 'claude', 'gpt', 'llm', 'modell', 'algoritm', 
-      'datascience', 'data science', 'cursor', 'github copilot', 'copilot',
-      'chatgpt', 'gemini', 'bard', 'claude ai', 'assistant', 'assistant api',
-      'responses api', 'langchain', 'vector', 'embedding', 'transformer',
-      'deep learning', 'neural network', 'nlp', 'natural language', 'prompt',
-      'fine-tuning', 'rag', 'retrieval', 'generation', 'ai tool', 'ai verktyg',
-      'ai editor', 'ai ide', 'code completion', 'autocomplete', 'ai agent',
-      'ai system', 'ai utveckling', 'ai nyhet', 'ai release', 'ai update'
-    ];
-    const questionLower = trimmedQuestion.toLowerCase();
-    const isAiRelated = aiKeywords.some(keyword => questionLower.includes(keyword));
+    // Validera att frågan är AI-relaterad genom att fråga AI själv
+    const validateWithAI = async (q: string): Promise<boolean> => {
+      const validationPrompt = `Är följande fråga relaterad till AI (artificiell intelligens), maskininlärning, teknologi, tech-företag eller AI-utveckling?
+
+Fråga: "${q}"
+
+Svara ENDAST med "JA" eller "NEJ" utan någon förklaring.`;
+
+      try {
+        const validationResponse = await createResponse(validationPrompt, {
+          model: 'gpt-4o',
+          maxTokens: 10,
+          temperature: 0.1
+        });
+
+        const answer = validationResponse.content.trim().toLowerCase();
+        // Acceptera "ja", "yes", "j", "y" eller varianter
+        return answer.startsWith('ja') || answer.startsWith('yes') || answer === 'j' || answer === 'y';
+      } catch (err) {
+        console.error('Validation error:', err);
+        // Vid fel, tillåt frågan (fail-open för bättre användarupplevelse)
+        return true;
+      }
+    };
+
+    // Validera frågan med AI
+    const isAiRelated = await validateWithAI(trimmedQuestion);
     
     if (!isAiRelated) {
       return res.status(400).json({ 
         ok: false, 
-        error: 'Frågan måste vara relaterad till AI (artificiell intelligens). Försök igen med en AI-relaterad fråga.' 
+        error: 'Frågan måste vara relaterad till AI, teknologi eller tech-företag. Försök igen med en relevant fråga.' 
       });
     }
 

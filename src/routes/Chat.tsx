@@ -18,21 +18,17 @@ export default function Chat() {
   });
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Validera att frågan är AI-relaterad (enkel nyckelord-kontroll)
-  const aiKeywords = [
-    'ai', 'artificiell intelligens', 'machine learning', 'ml', 'neural', 
-    'openai', 'anthropic', 'claude', 'gpt', 'llm', 'modell', 'algoritm', 
-    'datascience', 'data science', 'cursor', 'github copilot', 'copilot',
-    'chatgpt', 'gemini', 'bard', 'claude ai', 'assistant', 'assistant api',
-    'responses api', 'langchain', 'vector', 'embedding', 'transformer',
-    'deep learning', 'neural network', 'nlp', 'natural language', 'prompt',
-    'fine-tuning', 'rag', 'retrieval', 'generation', 'ai tool', 'ai verktyg',
-    'ai editor', 'ai ide', 'code completion', 'autocomplete', 'ai agent',
-    'ai system', 'ai utveckling', 'ai nyhet', 'ai release', 'ai update'
-  ];
-  const isAiRelated = (q: string) => {
+  // Enkel frontend-validering - bara blockera uppenbart irrelevanta frågor
+  // Den riktiga valideringen sker i backend med AI
+  const hasObviousIrrelevantKeywords = (q: string) => {
     const qLower = q.toLowerCase();
-    return aiKeywords.some(keyword => qLower.includes(keyword));
+    const obviousNegativeKeywords = [
+      'recept', 'mat', 'matlagning', 'kök', 'baka', 'tårta', 'kaka',
+      'middag', 'lunch', 'frukost', 'ingrediens', 'kräm', 'sås',
+      'sport', 'fotboll', 'hockey', 'tennis', 'golf', 'träning',
+      'hälsa', 'sjukdom', 'medicin', 'läkare', 'sjukvård'
+    ];
+    return obviousNegativeKeywords.some(keyword => qLower.includes(keyword));
   };
 
   // Hämta sparade frågor vid mount
@@ -67,9 +63,10 @@ export default function Chat() {
       return;
     }
 
-    // Validera att frågan är AI-relaterad
-    if (!isAiRelated(trimmedQuestion)) {
-      setError('Frågan måste vara relaterad till AI (artificiell intelligens). Försök igen med en AI-relaterad fråga.');
+    // Enkel frontend-validering - bara blockera uppenbart irrelevanta frågor
+    // Den riktiga valideringen sker i backend med AI
+    if (hasObviousIrrelevantKeywords(trimmedQuestion)) {
+      setError('Frågan verkar inte vara relaterad till AI eller teknologi. Försök igen med en relevant fråga.');
       return;
     }
 
@@ -95,7 +92,7 @@ export default function Chat() {
 
   async function handleQuestionClick(savedQuestion: UserQuestionDoc) {
     const trimmedQuestion = savedQuestion.question.trim();
-    if (trimmedQuestion && isAiRelated(trimmedQuestion)) {
+    if (trimmedQuestion) {
       setQuestion(trimmedQuestion);
       await handleSubmitWithQuestion(trimmedQuestion);
     }
@@ -126,7 +123,7 @@ export default function Chat() {
       <Seo title="Nyhets Chat – AI‑Arne" description="Ställ frågor om AI-nyheter och utveckling" />
       <h1>Nyhets Chat</h1>
       <p className="muted">
-        Ställ frågor om AI-nyheter och utveckling. Endast AI-relaterade frågor accepteras.
+        Ställ frågor om AI-nyheter, teknologi och tech-företag. T.ex. "Microsoft och deras AI-tankar om framtiden" eller "Vad är nytt inom OpenAI?".
       </p>
 
       {/* Sparade frågor */}
