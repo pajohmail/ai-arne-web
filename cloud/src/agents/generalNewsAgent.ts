@@ -1,19 +1,6 @@
-import Parser from 'rss-parser';
 import { sanitizeHtml } from '../utils/text.js';
 import { upsertGeneralNews } from '../services/upsert.js';
 import { createResponse } from '../services/responses.js';
-import { isWithinLastWeek } from '../utils/time.js';
-
-const parser = new Parser();
-
-export interface RSSFeedItem {
-  title: string;
-  link: string;
-  contentSnippet?: string;
-  content?: string;
-  pubDate?: string;
-  isoDate?: string;
-}
 
 export interface ProcessedNewsItem {
   title: string;
@@ -23,208 +10,344 @@ export interface ProcessedNewsItem {
   source: string;
 }
 
-// Nyckelord att exkludera (bildgenerering, video, etc.)
-const EXCLUDE_KEYWORDS = [
-  'dall-e',
-  'dalle',
-  'midjourney',
-  'stable diffusion',
-  'sora',
-  'image generation',
-  'bildgenerering',
-  'video generation',
-  'videogenerering',
-  'text-to-image',
-  'text-to-video',
-  'image-to-image',
-  'img2img',
-  'diffusion model',
-  'paint',
-  'sketch',
-  'art generator',
-  'konstgenerator',
-  'visual ai',
-  'computer vision',
-  'image recognition',
-  'bildigenkänning'
-];
+export interface LLMNewsItem {
+  title: string;
+  summary: string;
+  sourceUrl: string;
+  sourceName: string;
+}
+
+export interface LLMNewsResponse {
+  news: LLMNewsItem[];
+}
 
 /**
- * Hämtar nyheter från RSS-feeds
+ * Använder LLM för att hitta veckans 10 viktigaste AI-relaterade nyheter
  */
-export async function fetchRSSFeeds(feedUrls: string[]): Promise<RSSFeedItem[]> {
-  const allItems: RSSFeedItem[] = [];
+export async function findTopAINewsWithLLM(): Promise<LLMNewsItem[]> {
+  const prompt = `Du är en AI-nyhetsexpert som identifierar veckans viktigaste AI-relaterade nyheter. Baserat på din kunskap om senaste veckans AI-händelser, identifiera de 10 viktigaste nyheterna.
 
-  for (const url of feedUrls) {
-    try {
-      const feed = await parser.parseURL(url);
-      const items = feed.items.map(item => ({
-        title: item.title || '',
-        link: item.link || '',
-        contentSnippet: item.contentSnippet || '',
-        content: item.content || '',
-        pubDate: item.pubDate,
-        isoDate: item.isoDate
-      }));
-      allItems.push(...items);
-    } catch (error) {
-      console.error(`Failed to fetch RSS feed ${url}:`, error);
-      // Fortsätt med nästa feed
+Fokusera på:
+- AI-utveckling och programmering
+- API-releases från stora AI-leverantörer (OpenAI, Anthropic, Google, etc.)
+- Tech-företags AI-utveckling och strategier
+- Maskininlärning och AI-forskning
+- AI-verktyg för utvecklare
+
+Exkludera:
+- Bildgenerering (DALL-E, Midjourney, Stable Diffusion, etc.)
+- Videogenerering (Sora, etc.)
+- Visuella AI-tjänster som inte är relevanta för utveckling
+
+    VIKTIGT: Returnera ENDAST validerad JSON utan extra text. Exakt format:
+    {
+      "news": [
+        {
+          "title": "Nyhetstitel",
+          "summary": "100-200 ord sammanfattning",
+          "sourceUrl": "https://källa.se/artikel",
+          "sourceName": "Källans namn"
+        }
+      ]
     }
-  }
 
-  return allItems;
-}
-
-/**
- * Filtrerar nyheter med nyckelord för att exkludera bild/video-generering
- */
-export function filterForDevelopmentFocus(item: RSSFeedItem): boolean {
-  const searchText = `${item.title} ${item.contentSnippet || ''} ${item.content || ''}`.toLowerCase();
-  
-  // Exkludera om något av nyckelorden finns
-  const hasExcludeKeyword = EXCLUDE_KEYWORDS.some(keyword => 
-    searchText.includes(keyword.toLowerCase())
-  );
-
-  return !hasExcludeKeyword;
-}
-
-/**
- * Filtrerar nyheter baserat på publiceringsdatum - endast nyheter från senaste veckan
- */
-export function filterByDate(item: RSSFeedItem): boolean {
-  // Försök först med isoDate (ISO 8601 format), sedan pubDate
-  const dateStr = item.isoDate || item.pubDate;
-  if (!dateStr) {
-    // Om inget datum finns, exkludera (säkerhetsprincip)
-    return false;
-  }
-  
-  return isWithinLastWeek(dateStr);
-}
-
-/**
- * Använder OpenAI Responses API för att sammanfatta och verifiera utvecklingsfokus
- * Fallback till Anthropic om OpenAI API-nyckel saknas eller misslyckas
- * Fallback till enkel sammanfattning om inga API-nycklar finns
- */
-export async function summarizeWithAI(item: RSSFeedItem, source: string): Promise<ProcessedNewsItem | null> {
-  const content = item.contentSnippet || item.content || '';
-  const prompt = `Du är en AI-nyhetsredigerare som fokuserar på AI-utveckling och programmering. Skriv på ett underhållande sätt med en tydlig touch av ironi och svenska humor. Använd ironi och svenska humor flitigt genom hela artikeln.
-
-Kontrollera följande nyhet och skapa en detaljerad artikel på svenska som fokuserar på utvecklingsaspekter. Sök efter mer information online för att komplettera artikeln med relevanta källor, bakgrundsinformation och sammanhang.
-
-Om nyheten handlar om bildgenerering, videogenerering, eller visuella AI-tjänster som inte är relevanta för utveckling, returnera enbart "SKIP".
-
-Nyhetstitel: ${item.title}
-Innehåll: ${content.substring(0, 2000)}
-
-VIKTIGT: Skriv MINST 600 ord totalt. Var inte kortfattad. Undvik korta svar. Var detaljerad och utförlig.
-
-Skapa en längre, mer detaljerad artikel på svenska med:
-- Titel (behåll originaltiteln om den är relevant)
-- En sammanfattning (MINST 100 ord, 6-10 meningar) - underhållande men informativ, med tydlig ironisk touch och svenska humor
-- Huvudinnehåll (MINST 500 ord, 15-25 meningar) - engagerande med en tydlig touch av ironi genom hela texten, inkludera relevanta källor, bakgrundsinformation och sammanhang. Var inte rädd för att vara detaljerad och inkludera exempel, jämförelser och anekdoter. Använd ironi och svenska humor flitigt.
-
-Format:
-TITEL: [titel]
-SAMMANFATTNING: [sammanfattning - MINST 100 ord]
-INNEHÅLL: [huvudinnehåll - MINST 500 ord]
-
-Var underhållande och engagerande - läsaren ska vilja läsa hela artikeln.`;
+    KRITISKA REGLER FÖR JSON:
+    1. Returnera ENDAST JSON - ingen markdown, ingen extra text före eller efter
+    2. Varje nyhet måste ha exakt 4 fält: title, summary, sourceUrl, sourceName
+    3. sourceUrl och sourceName kan vara tomma strängar "" om källan saknas
+    4. INGEN trailing comma före ] eller }
+    5. Alla strängar måste vara korrekt escaped med dubbla citattecken
+    6. Returnera exakt 10 nyheter
+    7. Varje sammanfattning: 100-200 ord, informativ
+    8. Kontrollera att JSON är validerad innan du returnerar den`;
 
   try {
-    // Använd Responses API med fallback till Anthropic
     const response = await createResponse(prompt, {
       model: 'gpt-5-mini',
-      maxTokens: 2500,
-      temperature: 0.8 // Ökad temperatur för mer kreativitet och humor
+      maxTokens: 3000,
+      temperature: 0.7
     });
 
-    const responseText = response.content;
-    
-    // Logga vilken provider som användes
-    console.log(`Summarized with ${response.provider} API`);
+        const responseText = response.content.trim();
+        
+        console.log('LLM response (first 1000 chars):', responseText.substring(0, 1000));
+        
+        // Försök extrahera JSON från svaret (kan innehålla markdown code blocks)
+        let jsonText = responseText;
+        
+        // Ta bort markdown code blocks om de finns
+        const jsonMatch = responseText.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/);
+        if (jsonMatch) {
+          jsonText = jsonMatch[1];
+        } else {
+          // Försök hitta JSON-objekt direkt - hitta första { och sista }
+          const firstBrace = responseText.indexOf('{');
+          const lastBrace = responseText.lastIndexOf('}');
+          if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+            jsonText = responseText.substring(firstBrace, lastBrace + 1);
+          }
+        }
 
-    // Om LLM säger SKIP, hoppa över denna nyhet
-    if (responseText.includes('SKIP') || responseText.trim().length === 0) {
-      return null;
+        // Försök fixa vanliga JSON-fel
+        // 1. Ta bort trailing kommatecken i arrays och objects (flera gånger för att fånga alla)
+        let previousLength = 0;
+        let iterations = 0;
+        while (jsonText.length !== previousLength && iterations < 10) {
+          previousLength = jsonText.length;
+          jsonText = jsonText.replace(/,(\s*[}\]])/g, '$1');
+          iterations++;
+        }
+        
+        // 2. Fixa oavslutade strängar (ta bort oavslutade quotes i slutet)
+        jsonText = jsonText.replace(/("|')([^"']*)$/g, '$1');
+        
+        // 3. Ta bort whitespace i början och slutet
+        jsonText = jsonText.trim();
+        
+        // 4. Försök hitta och fixa oavslutade arrays/objects
+        const openBraces = (jsonText.match(/\{/g) || []).length;
+        const closeBraces = (jsonText.match(/\}/g) || []).length;
+        const openBrackets = (jsonText.match(/\[/g) || []).length;
+        const closeBrackets = (jsonText.match(/\]/g) || []).length;
+        
+        // Lägg till saknade stängande brackets/braces om det behövs
+        if (openBraces > closeBraces) {
+          jsonText += '}'.repeat(openBraces - closeBraces);
+        }
+        if (openBrackets > closeBrackets) {
+          jsonText += ']'.repeat(openBrackets - closeBrackets);
+        }
+        
+        console.log('Extracted JSON (first 1000 chars):', jsonText.substring(0, 1000));
+        console.log('Extracted JSON (last 500 chars):', jsonText.substring(Math.max(0, jsonText.length - 500)));
+
+        let parsed: LLMNewsResponse;
+        try {
+          parsed = JSON.parse(jsonText);
+        } catch (parseError: any) {
+          console.error('JSON parse error:', parseError);
+          const positionMatch = parseError.message.match(/position (\d+)/);
+          if (positionMatch) {
+            const position = parseInt(positionMatch[1]);
+            const start = Math.max(0, position - 300);
+            const end = Math.min(jsonText.length, position + 300);
+            console.error('JSON text around error position:', jsonText.substring(start, end));
+            console.error('Character at error position:', jsonText[position]);
+            console.error('Full JSON length:', jsonText.length);
+          }
+          
+          // Försök en sista gång med mer aggressiv fixning
+          try {
+            // Ta bort allt efter sista }
+            const lastBrace = jsonText.lastIndexOf('}');
+            if (lastBrace !== -1) {
+              let cleanedJson = jsonText.substring(0, lastBrace + 1);
+              
+              // Fixa trailing commas flera gånger
+              let fixed = false;
+              for (let i = 0; i < 20; i++) {
+                const before = cleanedJson;
+                cleanedJson = cleanedJson.replace(/,(\s*[}\]])/g, '$1');
+                if (before === cleanedJson) {
+                  fixed = true;
+                  break;
+                }
+              }
+              
+              // Försök parse igen
+              parsed = JSON.parse(cleanedJson);
+              console.log('Successfully parsed after aggressive cleaning');
+            } else {
+              throw parseError;
+            }
+          } catch (retryError: any) {
+            // Sista försöket: försök extrahera bara news-arrayen
+            try {
+              const newsArrayMatch = jsonText.match(/"news"\s*:\s*\[([\s\S]*)\]/);
+              if (newsArrayMatch) {
+                let newsArrayText = '[' + newsArrayMatch[1] + ']';
+                
+                // Fixa trailing commas i arrayen flera gånger
+                for (let i = 0; i < 20; i++) {
+                  const before = newsArrayText;
+                  newsArrayText = newsArrayText.replace(/,(\s*[}\]])/g, '$1');
+                  if (before === newsArrayText) break;
+                }
+                
+                // Försök hitta och fixa oavslutade objects i arrayen
+                const openBracesInArray = (newsArrayText.match(/\{/g) || []).length;
+                const closeBracesInArray = (newsArrayText.match(/\}/g) || []).length;
+                if (openBracesInArray > closeBracesInArray) {
+                  newsArrayText += '}'.repeat(openBracesInArray - closeBracesInArray);
+                }
+                
+                const newsArray = JSON.parse(newsArrayText);
+                parsed = { news: newsArray };
+                console.log('Successfully parsed by extracting news array directly');
+              } else {
+                throw new Error(`Failed to parse JSON: ${parseError.message}. Retry also failed: ${retryError.message}`);
+              }
+            } catch (finalError: any) {
+              // Sista försöket: försök extrahera individuella nyheter från arrayen
+              try {
+                console.log('Attempting to extract individual news items from malformed JSON...');
+                // Försök hitta alla news-objekt individuellt
+                const newsItemMatches = jsonText.match(/\{[^}]*"title"[^}]*"summary"[^}]*\}/g);
+                if (newsItemMatches && newsItemMatches.length > 0) {
+                  const extractedNews: any[] = [];
+                  for (const match of newsItemMatches) {
+                    try {
+                      const cleaned = match.replace(/,(\s*[}\]])/g, '$1');
+                      const item = JSON.parse(cleaned);
+                      if (item.title && item.summary) {
+                        extractedNews.push({
+                          title: item.title,
+                          summary: item.summary,
+                          sourceUrl: item.sourceUrl || '',
+                          sourceName: item.sourceName || ''
+                        });
+                      }
+                    } catch (e) {
+                      // Ignorera individuella parsing-fel
+                    }
+                  }
+                  if (extractedNews.length > 0) {
+                    parsed = { news: extractedNews };
+                    console.log(`Successfully extracted ${extractedNews.length} news items individually`);
+                  } else {
+                    throw finalError;
+                  }
+                } else {
+                  throw finalError;
+                }
+              } catch (extractError: any) {
+                throw new Error(`Failed to parse JSON: ${parseError.message}. Retry also failed: ${retryError.message}. Final error: ${finalError.message}. Extract error: ${extractError.message}`);
+              }
+            }
+          }
+        }
+    
+    if (!parsed || !parsed.news || !Array.isArray(parsed.news)) {
+      console.error('Invalid JSON structure:', parsed);
+      throw new Error('Invalid JSON structure: missing news array');
     }
 
-    // Parsa LLM-svaret
-    const titleMatch = responseText.match(/TITEL:\s*(.+?)(?:\n|$)/i);
-    const excerptMatch = responseText.match(/SAMMANFATTNING:\s*(.+?)(?:\n|$)/is);
-    const contentMatch = responseText.match(/INNEHÅLL:\s*(.+?)(?:\n|$)/is);
+    console.log(`Found ${parsed.news.length} news items from LLM`);
+    
+    // Validera att alla nyheter har rätt struktur
+    const validNews = parsed.news.filter((item: any) => {
+      const hasTitle = item.title && typeof item.title === 'string';
+      const hasSummary = item.summary && typeof item.summary === 'string';
+      console.log(`Validating news item: ${item.title || 'NO TITLE'} - hasTitle: ${hasTitle}, hasSummary: ${hasSummary}`);
+      return hasTitle && hasSummary;
+    });
+    
+    console.log(`Validated ${validNews.length} news items out of ${parsed.news.length}`);
 
-    const title = titleMatch ? titleMatch[1].trim() : item.title;
-    const excerpt = excerptMatch ? excerptMatch[1].trim().slice(0, 280) : (item.contentSnippet || '').slice(0, 280);
-    const content = contentMatch ? contentMatch[1].trim() : (item.contentSnippet || '').slice(0, 500);
+    // Begränsa till 10 nyheter
+    return validNews.slice(0, 10);
+  } catch (error: any) {
+    console.error('Failed to find news with LLM:', error);
+    console.error('Error details:', {
+      message: error?.message,
+      stack: error?.stack
+    });
+    throw error;
+  }
+}
 
-    // Skapa HTML-innehåll (sanitize textdelar men behåll HTML-struktur)
+/**
+ * Omarbetar en nyhetssammanfattning med AI för att göra den underhållande med ironisk touch
+ */
+export async function rewriteNewsWithAI(newsItem: LLMNewsItem): Promise<ProcessedNewsItem> {
+  const prompt = `Du är en AI-nyhetsskribent som omarbetar nyhetssammanfattningar till underhållande text med en tydlig touch av ironi och svenska humor. Använd ironi och svenska humor flitigt genom hela texten.
+
+Originalnyhet:
+Titel: ${newsItem.title}
+Sammanfattning: ${newsItem.summary}
+Källa: ${newsItem.sourceName}
+
+VIKTIGT: Skriv en omarbetad sammanfattning på 100-200 ord som:
+- Behåller all viktig information från originalnyheten
+- Är underhållande och engagerande att läsa
+- Har en tydlig ironisk touch och svenska humor
+- Är informativ men rolig
+- Använder ironi och humor flitigt men respekterar faktan
+
+Skriv sammanfattningen direkt utan extra formatering.`;
+
+  try {
+    const response = await createResponse(prompt, {
+      model: 'gpt-5-mini',
+      maxTokens: 500,
+      temperature: 0.8 // Högre temperatur för mer kreativitet och humor
+    });
+
+    const rewrittenSummary = response.content.trim();
+    
+    // Skapa HTML-innehåll
     const htmlContent = [
-      `<p><strong>${sanitizeHtml(title)}</strong></p>`,
-      `<p>${sanitizeHtml(excerpt)}</p>`,
-      `<p>${sanitizeHtml(content)}</p>`,
-      `<p>Källa: <a href="${sanitizeHtml(item.link)}" rel="noopener" target="_blank">${sanitizeHtml(item.link)}</a></p>`
+      `<p><strong>${sanitizeHtml(newsItem.title)}</strong></p>`,
+      `<p>${sanitizeHtml(rewrittenSummary)}</p>`,
+      newsItem.sourceUrl ? `<p>Källa: <a href="${sanitizeHtml(newsItem.sourceUrl)}" rel="noopener" target="_blank">${sanitizeHtml(newsItem.sourceName || newsItem.sourceUrl)}</a></p>` : `<p>Källa: ${sanitizeHtml(newsItem.sourceName || 'Okänd')}</p>`
     ].join('');
 
     return {
-      title: sanitizeHtml(title),
+      title: sanitizeHtml(newsItem.title),
       content: htmlContent,
-      excerpt: sanitizeHtml(excerpt),
-      sourceUrl: item.link,
-      source
+      excerpt: sanitizeHtml(rewrittenSummary.slice(0, 280)),
+      sourceUrl: newsItem.sourceUrl || '',
+      source: newsItem.sourceName || 'LLM-sökning'
     };
   } catch (error) {
-    console.error(`Failed to summarize with AI (both OpenAI and Anthropic failed):`, error);
+    console.error(`Failed to rewrite news with AI, using original:`, error);
     
-    // Fallback till enkel sammanfattning utan LLM om både OpenAI och Anthropic misslyckas
-    const fallbackContent = item.contentSnippet || item.content || '';
+    // Fallback till original om AI-omarbetning misslyckas
     const fallbackHtml = [
-      `<p><strong>${sanitizeHtml(item.title)}</strong></p>`,
-      `<p>${sanitizeHtml(fallbackContent)}</p>`,
-      `<p>Källa: <a href="${sanitizeHtml(item.link)}" rel="noopener" target="_blank">${sanitizeHtml(item.link)}</a></p>`
+      `<p><strong>${sanitizeHtml(newsItem.title)}</strong></p>`,
+      `<p>${sanitizeHtml(newsItem.summary)}</p>`,
+      newsItem.sourceUrl ? `<p>Källa: <a href="${sanitizeHtml(newsItem.sourceUrl)}" rel="noopener" target="_blank">${sanitizeHtml(newsItem.sourceName || newsItem.sourceUrl)}</a></p>` : `<p>Källa: ${sanitizeHtml(newsItem.sourceName || 'Okänd')}</p>`
     ].join('');
     
     return {
-      title: sanitizeHtml(item.title),
+      title: sanitizeHtml(newsItem.title),
       content: fallbackHtml,
-      excerpt: sanitizeHtml(fallbackContent.slice(0, 280)),
-      sourceUrl: item.link,
-      source
+      excerpt: sanitizeHtml(newsItem.summary.slice(0, 280)),
+      sourceUrl: newsItem.sourceUrl || '',
+      source: newsItem.sourceName || 'LLM-sökning'
     };
   }
 }
 
 /**
- * Bearbetar och sparar allmänna nyheter
+ * Bearbetar och sparar allmänna nyheter från LLM-sökning
  */
-export async function processAndUpsertNews(items: RSSFeedItem[], source: string): Promise<number> {
+export async function processAndUpsertNews(newsItems: LLMNewsItem[]): Promise<number> {
   let processed = 0;
 
-  for (const item of items) {
-    // Filtrera först baserat på datum - endast nyheter från senaste veckan
-    if (!filterByDate(item)) {
-      continue;
-    }
+  console.log(`Processing ${newsItems.length} news items...`);
 
-    // Sedan filtrera med nyckelord
-    if (!filterForDevelopmentFocus(item)) {
-      continue;
+  for (const newsItem of newsItems) {
+    try {
+      console.log(`Processing news item: ${newsItem.title}`);
+      // Omarbeta nyheten med AI för att göra den underhållande
+      const processedItem = await rewriteNewsWithAI(newsItem);
+      console.log(`Rewritten news item: ${processedItem.title}, content length: ${processedItem.content.length}`);
+      
+      // Spara i databas
+      const result = await upsertGeneralNews(processedItem);
+      console.log(`Upserted news item: ${result.id}, slug: ${result.slug}, updated: ${result.updated}`);
+      processed++;
+    } catch (error: any) {
+      console.error(`Failed to process news item "${newsItem.title}":`, error);
+      console.error(`Error details:`, {
+        message: error?.message,
+        stack: error?.stack
+      });
+      // Fortsätt med nästa nyhet även om denna misslyckas
     }
-
-    // LLM-baserad sammanfattning och filtrering
-    const processedItem = await summarizeWithAI(item, source);
-    if (!processedItem) {
-      continue; // LLM sa SKIP
-    }
-
-    // Spara i databas
-    await upsertGeneralNews(processedItem);
-    processed++;
   }
 
+  console.log(`Successfully processed ${processed} out of ${newsItems.length} news items`);
   return processed;
 }
-

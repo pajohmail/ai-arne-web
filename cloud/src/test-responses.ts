@@ -1,6 +1,6 @@
 import { config } from 'dotenv';
 import { createResponse } from './services/responses.js';
-import { summarizeWithAI } from './agents/generalNewsAgent.js';
+import { rewriteNewsWithAI } from './agents/generalNewsAgent.js';
 import { createOrUpdateTutorial } from './agents/tutorialAgent.js';
 import type { ProviderRelease } from './agents/providers.js';
 
@@ -43,32 +43,30 @@ async function testResponsesAPI() {
     console.log('');
   }
 
-  // Test 2: generalNewsAgent summarizeWithAI
+  // Test 2: generalNewsAgent rewriteNewsWithAI
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('📰 Test 2: generalNewsAgent - summarizeWithAI');
+  console.log('📰 Test 2: generalNewsAgent - rewriteNewsWithAI');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   try {
-    const testRSSItem = {
+    const testNewsItem = {
       title: 'OpenAI releases new GPT-4 model',
-      link: 'https://example.com/news',
-      contentSnippet: 'OpenAI has released a new version of GPT-4 with improved capabilities for developers.',
-      content: 'OpenAI has released a new version of GPT-4 with improved capabilities for developers. The new model includes better code generation and natural language understanding.',
-      pubDate: new Date().toISOString(),
-      isoDate: new Date().toISOString()
+      summary: 'OpenAI has released a new version of GPT-4 with improved capabilities for developers. The new model includes better code generation and natural language understanding, making it more useful for software development tasks.',
+      sourceUrl: 'https://example.com/news',
+      sourceName: 'TechCrunch'
     };
     
-    console.log(`Testar RSS-item: "${testRSSItem.title}"`);
+    console.log(`Testar nyhetsitem: "${testNewsItem.title}"`);
     
-    const result = await summarizeWithAI(testRSSItem, 'Test Source');
+    const result = await rewriteNewsWithAI(testNewsItem);
     
     if (result) {
-      console.log('✅ Sammanfattning genererad:');
+      console.log('✅ Sammanfattning omarbetad:');
       console.log(`   Titel: ${result.title}`);
       console.log(`   Excerpt: ${result.excerpt.substring(0, 100)}...`);
       console.log(`   Content length: ${result.content.length} tecken`);
       console.log('');
     } else {
-      console.log('⚠️  Resultatet var null (troligen SKIP från AI)');
+      console.log('⚠️  Resultatet var null');
       console.log('');
     }
   } catch (error: any) {

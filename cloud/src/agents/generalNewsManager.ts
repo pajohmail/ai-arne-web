@@ -1,4 +1,4 @@
-import { fetchRSSFeeds, processAndUpsertNews } from './generalNewsAgent.js';
+import { findTopAINewsWithLLM, processAndUpsertNews } from './generalNewsAgent.js';
 import { postToLinkedIn } from '../services/linkedin.js';
 import { withFirestore } from '../services/firestore.js';
 import { COLLECTIONS } from '../services/schema.js';
@@ -7,34 +7,29 @@ import { COLLECTIONS } from '../services/schema.js';
  * Huvudfunktion som kör hela flödet för allmänna AI-nyheter
  */
 export async function runGeneralNewsManager({ force = false }: { force?: boolean } = {}) {
-  const feedUrlsStr = process.env.RSS_FEEDS;
-  if (!feedUrlsStr) {
-    console.warn('RSS_FEEDS environment variable not set');
-    return { processed: 0, error: 'RSS_FEEDS not configured' };
-  }
-
-  const feedUrls = feedUrlsStr.split(',').map(url => url.trim()).filter(Boolean);
-  if (feedUrls.length === 0) {
-    return { processed: 0, error: 'No RSS feeds configured' };
-  }
-
-  // Bearbeta max 5 nyheter per körning
+  // Bearbeta max 10 nyheter per körning (top 10)
   let processed = 0;
   const processedNews: Array<{ id: string; slug: string; title: string; sourceUrl: string }> = [];
 
-  // Processera varje feed individuellt för att få rätt källa
-  for (let i = 0; i < feedUrls.length && processedNews.length < 5; i++) {
-    const feedUrl = feedUrls[i];
-    const source = `RSS Feed ${i + 1}`;
+  try {
+    console.log('Starting general news manager - finding top AI news with LLM...');
     
-    // Hämta items från denna specifika feed
-    const feedItems = await fetchRSSFeeds([feedUrl]);
-    const itemsToProcessFromFeed = feedItems.slice(0, 1); // Ta första från varje feed
+    // Hitta veckans 10 viktigaste AI-nyheter via LLM
+    const newsItems = await findTopAINewsWithLLM();
+    
+    console.log(`Found ${newsItems.length} news items from LLM`);
+    
+    if (newsItems.length === 0) {
+      console.warn('No news items found by LLM');
+      return { processed: 0, error: 'No news items found' };
+    }
 
-    if (itemsToProcessFromFeed.length === 0) continue;
+    console.log('Processing and upserting news items...');
     
     // Bearbeta och spara nyheter
-    const count = await processAndUpsertNews(itemsToProcessFromFeed, source);
+    const count = await processAndUpsertNews(newsItems);
+    
+    console.log(`Processed ${count} news items`);
     
     if (count > 0) {
       // Hämta sparade nyheter från databasen för att få ID och slug
@@ -50,8 +45,16 @@ export async function runGeneralNewsManager({ force = false }: { force?: boolean
       });
 
       processedNews.push(...savedNews);
-      processed += count;
+      processed = count;
     }
+  } catch (error: any) {
+    console.error('Failed to run general news manager:', error);
+    console.error('Error details:', {
+      message: error?.message,
+      stack: error?.stack,
+      name: error?.name
+    });
+    return { processed: 0, error: error?.message || 'Unknown error' };
   }
 
   // Publicera på LinkedIn (hoppa över om credentials är placeholders)
@@ -94,4 +97,3 @@ export async function runGeneralNewsManager({ force = false }: { force?: boolean
 
   return { processed };
 }
-

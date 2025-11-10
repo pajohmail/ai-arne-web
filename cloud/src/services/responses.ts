@@ -35,27 +35,54 @@ export async function createResponse(
     try {
       const openai = new OpenAI({ apiKey: openaiApiKey });
       
-      // Använd Responses API (beta endpoint)
-      // Responses API är tillståndsbevarande och stödjer verktyg
-      const response = await openai.chat.completions.create({
-        model: options.model || 'gpt-4o-mini', // Default fallback - kan ändras till gpt-5-mini om det stöds
-        messages: [
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        max_tokens: options.maxTokens || 1000,
-        temperature: options.temperature || 0.7
-      });
-
-      const content = response.choices[0]?.message?.content || '';
+      const model = options.model || 'gpt-4o-mini';
+      const isGpt5Model = model === 'gpt-5' || model === 'gpt-5-mini';
       
-      if (content) {
-        return {
-          content,
-          provider: 'openai'
+      // Använd Responses API för gpt-5 modeller, annars chat.completions
+      if (isGpt5Model) {
+        // Responses API syntax för gpt-5/gpt-5-mini
+        const requestOptions: any = {
+          model,
+          input: prompt
         };
+        
+        // Responses API använder max_output_tokens
+        if (options.maxTokens) {
+          requestOptions.max_output_tokens = options.maxTokens;
+        }
+        
+        const response = await (openai as any).responses.create(requestOptions);
+        const content = response.output_text || '';
+        
+        if (content) {
+          return {
+            content,
+            provider: 'openai'
+          };
+        }
+      } else {
+        // Chat completions API för äldre modeller
+        const requestOptions: any = {
+          model,
+          messages: [
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          max_tokens: options.maxTokens || 1000,
+          temperature: options.temperature || 0.7
+        };
+        
+        const response = await openai.chat.completions.create(requestOptions);
+        const content = response.choices[0]?.message?.content || '';
+        
+        if (content) {
+          return {
+            content,
+            provider: 'openai'
+          };
+        }
       }
     } catch (error: any) {
       const errorDetails = {
@@ -140,27 +167,69 @@ export async function createResponseWithContext(
         { role: 'user', content: prompt }
       ];
 
-      const response = await openai.chat.completions.create({
-        model: options.model || 'gpt-5-mini',
-        messages: messages.map(msg => ({
-          role: msg.role,
-          content: msg.content
-        })),
-        max_tokens: options.maxTokens || 1000,
-        temperature: options.temperature || 0.7
-      });
-
-      const content = response.choices[0]?.message?.content || '';
+      const model = options.model || 'gpt-5-mini';
+      const isGpt5Model = model === 'gpt-5' || model === 'gpt-5-mini';
       
-      if (content) {
-        // Generera ett nytt conversation ID om det inte finns
-        const newConversationId = conversationId || `conv_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+      // Använd Responses API för gpt-5 modeller, annars chat.completions
+      if (isGpt5Model) {
+        // Responses API syntax för gpt-5/gpt-5-mini
+        // Bygg input från message history
+        const inputText = messages.map(msg => {
+          if (msg.role === 'user') {
+            return `User: ${msg.content}`;
+          } else {
+            return `Assistant: ${msg.content}`;
+          }
+        }).join('\n\n');
         
-        return {
-          content,
-          provider: 'openai',
-          conversationId: newConversationId
+        const requestOptions: any = {
+          model,
+          input: inputText
         };
+        
+        // Responses API använder max_output_tokens
+        if (options.maxTokens) {
+          requestOptions.max_output_tokens = options.maxTokens;
+        }
+        
+        const response = await (openai as any).responses.create(requestOptions);
+        const content = response.output_text || '';
+        
+        if (content) {
+          // Generera ett nytt conversation ID om det inte finns
+          const newConversationId = conversationId || `conv_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+          
+          return {
+            content,
+            provider: 'openai',
+            conversationId: newConversationId
+          };
+        }
+      } else {
+        // Chat completions API för äldre modeller
+        const requestOptions: any = {
+          model,
+          messages: messages.map(msg => ({
+            role: msg.role,
+            content: msg.content
+          })),
+          max_tokens: options.maxTokens || 1000,
+          temperature: options.temperature || 0.7
+        };
+        
+        const response = await openai.chat.completions.create(requestOptions);
+        const content = response.choices[0]?.message?.content || '';
+        
+        if (content) {
+          // Generera ett nytt conversation ID om det inte finns
+          const newConversationId = conversationId || `conv_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+          
+          return {
+            content,
+            provider: 'openai',
+            conversationId: newConversationId
+          };
+        }
       }
     } catch (error) {
       console.error('OpenAI Responses API failed, falling back to Anthropic:', error);
