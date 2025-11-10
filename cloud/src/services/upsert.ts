@@ -34,30 +34,50 @@ Sammanfattning: ${release.summary || 'Ingen sammanfattning tillgänglig'}
 
 VIKTIGT: Skriv MINST 500 ord. Var inte kortfattad. Undvik korta svar. Var detaljerad och utförlig.
 
+KRITISKT: Du MÅSTE söka aktivt online efter aktuell information om denna release. Använd internet för att hitta de senaste nyheterna, artiklar och källor om denna release. Använd INTE bara din träningsdata - sök aktivt efter ny information.
+
 Skapa en underhållande och engagerande artikel på svenska med:
 - En introduktion som förklarar vad denna release är och varför den är viktig (med ironisk touch)
 - En detaljerad förklaring av vad som är nytt och vad det betyder för utvecklare
-- Kontext och bakgrundsinformation om varför denna release är relevant
+- Kontext och bakgrundsinformation om varför denna release är relevant (sök online för aktuell information)
 - Exempel på användningsfall och potentiella fördelar
 - Jämförelser med tidigare versioner eller konkurrenter när det är relevant
 - En avslutning som sammanfattar vikten av denna release
+- Inkludera länkar och källor från dina online-sökningar
 
 Formatera innehållet som HTML med p, h2, h3, ul, li tags. Använd svenska språket.
 Var underhållande och engagerande - läsaren ska vilja läsa hela artikeln. Använd ironi och svenska humor flitigt genom hela texten.`;
 
   try {
+    console.log(`🤖 Generating AI content for ${release.provider} - ${release.name}${release.version ? ' ' + release.version : ''}`);
+    
     const response = await createResponse(prompt, {
       model: 'gpt-5-mini',
       maxTokens: 2500,
       temperature: 0.8 // Högre temperatur för mer kreativitet och humor
     });
 
-    console.log(`Post content generated with ${response.provider} API`);
+    const contentLength = response.content.length;
+    const wordCount = response.content.split(/\s+/).length;
+    
+    console.log(`✅ Post content generated with ${response.provider.toUpperCase()} API`);
+    console.log(`   Content length: ${contentLength} chars, ~${wordCount} words`);
+    
+    if (wordCount < 400) {
+      console.warn(`⚠️  WARNING: Generated content is shorter than expected (${wordCount} words, expected 500+)`);
+    }
     
     const aiContent = sanitizeHtml(response.content);
     return `<p><strong>${title}</strong></p>${aiContent}\n<p>Källa: <a href="${sanitizeHtml(release.url)}" rel="noopener" target="_blank">${sanitizeHtml(release.url)}</a></p>`;
-  } catch (error) {
-    console.error(`Failed to generate post content with AI, using fallback:`, error);
+  } catch (error: any) {
+    console.error(`❌ Failed to generate post content with AI, using fallback:`, error);
+    console.error(`   Error details:`, {
+      message: error?.message,
+      status: error?.status,
+      statusCode: error?.statusCode,
+      code: error?.code
+    });
+    console.warn(`⚠️  FALLBACK MODE: Using summary instead of AI-generated content`);
     
     // Fallback till manuellt innehåll om AI misslyckas
     return sanitizeHtml(

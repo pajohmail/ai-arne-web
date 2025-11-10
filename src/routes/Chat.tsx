@@ -85,7 +85,15 @@ export default function Chat() {
       // Uppdatera lista över sparade frågor
       await loadSavedQuestions();
     } catch (err: any) {
-      setError(err.message || 'Kunde inte skicka frågan. Försök igen.');
+      console.error('[Chat] Submit error:', err);
+      const errorMessage = err?.message || 'Kunde inte skicka frågan. Försök igen.';
+      
+      // Visa mer specifikt felmeddelande för timeout
+      if (errorMessage.includes('timeout') || errorMessage.includes('tog för lång tid')) {
+        setError('AI-svaret tog för lång tid att generera. Försök igen med en kortare eller enklare fråga.');
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -113,7 +121,15 @@ export default function Chat() {
       // Uppdatera lista över sparade frågor
       await loadSavedQuestions();
     } catch (err: any) {
-      setError(err.message || 'Kunde inte skicka frågan. Försök igen.');
+      console.error('[Chat] Submit with question error:', err);
+      const errorMessage = err?.message || 'Kunde inte skicka frågan. Försök igen.';
+      
+      // Visa mer specifikt felmeddelande för timeout
+      if (errorMessage.includes('timeout') || errorMessage.includes('tog för lång tid')) {
+        setError('AI-svaret tog för lång tid att generera. Försök igen med en kortare eller enklare fråga.');
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setLoading(false);
     }

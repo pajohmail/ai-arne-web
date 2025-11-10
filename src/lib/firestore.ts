@@ -240,13 +240,14 @@ export async function sendChatMessage(question: string, sessionId?: string): Pro
   const url = '/api/chat.php';
   
   try {
+    console.log('[Chat] Sending message to:', url);
     const res = await fetchWithTimeout(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ question, sessionId }),
-      timeoutMs: 30000, // 30 sekunder timeout för AI-svar
+      timeoutMs: 300000, // 5 minuter timeout för AI-svar (backend kan ta upp till 5 min)
     });
     
     if (!res.ok) {
@@ -265,9 +266,16 @@ export async function sendChatMessage(question: string, sessionId?: string): Pro
       throw new Error(json.error || 'Okänt fel från API');
     }
     
+    console.log('[Chat] Success - provider:', json.data?.provider);
     return json.data;
   } catch (error: any) {
     console.error('[Chat] Error:', error);
+    
+    // Hantera AbortError specifikt
+    if (error?.name === 'AbortError' || error?.message?.includes('aborted')) {
+      throw new Error('Request timeout - AI-svaret tog för lång tid. Försök igen med en kortare fråga.');
+    }
+    
     throw error;
   }
 }

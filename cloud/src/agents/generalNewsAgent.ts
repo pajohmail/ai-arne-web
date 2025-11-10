@@ -25,7 +25,9 @@ export interface LLMNewsResponse {
  * Använder LLM för att hitta veckans 10 viktigaste AI-relaterade nyheter
  */
 export async function findTopAINewsWithLLM(): Promise<LLMNewsItem[]> {
-  const prompt = `Du är en AI-nyhetsexpert som identifierar veckans viktigaste AI-relaterade nyheter. Baserat på din kunskap om senaste veckans AI-händelser, identifiera de 10 viktigaste nyheterna.
+  const prompt = `Du är en AI-nyhetsexpert som identifierar veckans viktigaste AI-relaterade nyheter. 
+
+VIKTIGT: Du måste söka efter aktuella nyheter online och använda internet för att hitta de senaste händelserna. Använd inte bara din träningsdata - sök aktivt efter nyheter från den senaste veckan.
 
 Fokusera på:
 - AI-utveckling och programmering
@@ -38,6 +40,8 @@ Exkludera:
 - Bildgenerering (DALL-E, Midjourney, Stable Diffusion, etc.)
 - Videogenerering (Sora, etc.)
 - Visuella AI-tjänster som inte är relevanta för utveckling
+
+Sök aktivt online efter de senaste nyheterna och inkludera länkar till källor.
 
     VIKTIGT: Returnera ENDAST validerad JSON utan extra text. Exakt format:
     {
@@ -67,6 +71,8 @@ Exkludera:
       maxTokens: 3000,
       temperature: 0.7
     });
+    
+    console.log(`📰 LLM news search completed using ${response.provider} API`);
 
         const responseText = response.content.trim();
         
@@ -273,6 +279,7 @@ VIKTIGT: Skriv en omarbetad sammanfattning på 100-200 ord som:
 - Har en tydlig ironisk touch och svenska humor
 - Är informativ men rolig
 - Använder ironi och humor flitigt men respekterar faktan
+- Om möjligt, sök efter mer information online om nyheten för att ge mer kontext och detaljer
 
 Skriv sammanfattningen direkt utan extra formatering.`;
 
@@ -282,6 +289,8 @@ Skriv sammanfattningen direkt utan extra formatering.`;
       maxTokens: 500,
       temperature: 0.8 // Högre temperatur för mer kreativitet och humor
     });
+    
+    console.log(`✍️ News rewrite completed using ${response.provider} API`);
 
     const rewrittenSummary = response.content.trim();
     

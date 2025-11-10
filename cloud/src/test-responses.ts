@@ -30,7 +30,7 @@ async function testResponsesAPI() {
     console.log(`Prompt: "${testPrompt}"`);
     
     const response = await createResponse(testPrompt, {
-      model: 'gpt-4o',
+      model: 'gpt-5-mini',
       maxTokens: 100,
       temperature: 0.7
     });
@@ -98,7 +98,7 @@ async function testResponsesAPI() {
     const tutorialPrompt = `Du är en teknisk skribent. Skapa en kort tutorial-introduktion (2-3 meningar) på svenska för ${testRelease.name}.`;
     
     const tutorialResponse = await createResponse(tutorialPrompt, {
-      model: 'gpt-4o',
+      model: 'gpt-5-mini',
       maxTokens: 200,
       temperature: 0.7
     });

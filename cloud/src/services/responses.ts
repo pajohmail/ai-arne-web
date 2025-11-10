@@ -33,9 +33,10 @@ export async function createResponse(
   // Försök först med OpenAI Responses API
   if (openaiApiKey) {
     try {
+      console.log(`🔑 Attempting OpenAI API call (model: ${options.model || 'gpt-5-mini'})`);
       const openai = new OpenAI({ apiKey: openaiApiKey });
       
-      const model = options.model || 'gpt-4o-mini';
+      const model = options.model || 'gpt-5-mini';
       const isGpt5Model = model === 'gpt-5' || model === 'gpt-5-mini';
       
       // Använd Responses API för gpt-5 modeller, annars chat.completions
@@ -43,7 +44,8 @@ export async function createResponse(
         // Responses API syntax för gpt-5/gpt-5-mini
         const requestOptions: any = {
           model,
-          input: prompt
+          input: prompt,
+          timeout: 120000 // 120 sekunder timeout för Responses API
         };
         
         // Responses API använder max_output_tokens
@@ -51,10 +53,15 @@ export async function createResponse(
           requestOptions.max_output_tokens = options.maxTokens;
         }
         
+        console.log(`   Making Responses API call with timeout: 120s`);
+        const apiStartTime = Date.now();
         const response = await (openai as any).responses.create(requestOptions);
+        const apiTime = Date.now() - apiStartTime;
+        console.log(`   Responses API call completed in ${apiTime}ms`);
         const content = response.output_text || '';
         
         if (content) {
+          console.log(`✅ OpenAI API call successful (model: ${model})`);
           return {
             content,
             provider: 'openai'
@@ -78,6 +85,7 @@ export async function createResponse(
         const content = response.choices[0]?.message?.content || '';
         
         if (content) {
+          console.log(`✅ OpenAI API call successful (model: ${model})`);
           return {
             content,
             provider: 'openai'
@@ -103,11 +111,18 @@ export async function createResponse(
   // Fallback till Anthropic om OpenAI saknas eller misslyckas
   if (anthropicApiKey) {
     try {
+      console.log(`🔄 Falling back to Anthropic API (OpenAI failed or not available)`);
       const anthropic = new Anthropic({ apiKey: anthropicApiKey });
       
+      // Aktivera web search tool om det är tillgängligt
       const message = await anthropic.messages.create({
         model: 'claude-3-5-sonnet-20241022',
         max_tokens: options.maxTokens || 1000,
+        tools: [{
+          type: 'web_search_20250305',
+          name: 'web_search',
+          max_uses: 5
+        }],
         messages: [{
           role: 'user',
           content: prompt
@@ -117,6 +132,7 @@ export async function createResponse(
       const content = message.content[0]?.type === 'text' ? message.content[0].text : '';
       
       if (content) {
+        console.log(`✅ Anthropic API call successful (fallback mode)`);
         return {
           content,
           provider: 'anthropic'
@@ -140,6 +156,7 @@ export async function createResponse(
   }
 
   // Om inga API-nycklar finns
+  console.error('❌ No API keys available (neither OPENAI_API_KEY nor ANTHROPIC_API_KEY set)');
   throw new Error('No API keys available (neither OPENAI_API_KEY nor ANTHROPIC_API_KEY set)');
 }
 

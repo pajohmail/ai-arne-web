@@ -1,0 +1,34 @@
+# Apache konfiguration för ai-arne.se
+# Minimal version för one.com
+
+# Aktivera mod_rewrite om det finns
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Förhindra direkt åtkomst till känsliga filer
+    RewriteRule ^api/config\.php$ - [F,L]
+    RewriteRule ^api/config\.php\.example$ - [F,L]
+    
+    # För API-endpoints, låt dem passera direkt
+    RewriteCond %{REQUEST_URI} ^/api/
+    RewriteRule ^ - [L]
+    
+    # Om filen eller mappen finns, servera den direkt
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+    
+    # För alla andra requests, servera index.html
+    RewriteRule ^ index.html [L]
+</IfModule>
+
+# Förhindra direkt åtkomst till konfigurationsfiler
+<FilesMatch "^(config\.php|\.env)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
