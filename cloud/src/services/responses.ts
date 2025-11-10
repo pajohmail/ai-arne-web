@@ -53,6 +53,11 @@ export async function createResponse(
           requestOptions.max_output_tokens = options.maxTokens;
         }
         
+        // Temperature för kreativitet (om angiven)
+        if (options.temperature !== undefined) {
+          requestOptions.temperature = options.temperature;
+        }
+        
         // Aktivera web search om det är begärt
         if (options.enableWebSearch) {
           requestOptions.tools = [{ type: 'web_search_preview' }];
@@ -61,19 +66,40 @@ export async function createResponse(
           console.log(`   Making Responses API call`);
         }
         
-        // Responses API timeout (om det stöds)
-        requestOptions.timeout = 300000; // 5 minuter timeout
-        
         const apiStartTime = Date.now();
-        let response = await (openai as any).responses.create(requestOptions);
-        console.log(`   Initial response status: ${response?.status || 'unknown'}`);
+        let response: any;
+        
+        try {
+          // Skapa initial response
+          response = await (openai as any).responses.create(requestOptions);
+          console.log(`   Initial response received, status: ${response?.status || 'unknown'}, id: ${response?.id || 'none'}`);
+          
+          // Validera att response finns och har id
+          if (!response) {
+            throw new Error('No response received from Responses API');
+          }
+          
+          if (!response.id) {
+            console.warn(`   Warning: Response missing ID, may not be able to poll`);
+          }
+        } catch (createError: any) {
+          console.error(`   Failed to create Responses API request:`, createError?.message || createError);
+          console.error(`   Error details:`, {
+            message: createError?.message,
+            status: createError?.status,
+            statusCode: createError?.statusCode,
+            code: createError?.code,
+            type: createError?.type
+          });
+          throw createError; // Kasta vidare för fallback
+        }
         
         // Responses API är asynkront - polla tills status är "complete"
         let pollCount = 0;
         const maxPolls = 60; // Max 60 polls (5 minuter med 5 sekunders intervall)
         const pollInterval = 5000; // 5 sekunder mellan polls
         
-        while (response?.status === 'incomplete' && pollCount < maxPolls) {
+        while (response && response.status === 'incomplete' && pollCount < maxPolls) {
           pollCount++;
           console.log(`   Polling response (attempt ${pollCount}/${maxPolls}), status: ${response.status}`);
           
@@ -84,12 +110,18 @@ export async function createResponse(
           if (response?.id) {
             try {
               response = await (openai as any).responses.retrieve(response.id);
+              console.log(`   Poll ${pollCount} result: status=${response?.status || 'unknown'}`);
             } catch (pollError: any) {
-              console.error(`   Poll error:`, pollError?.message);
+              console.error(`   Poll error on attempt ${pollCount}:`, pollError?.message);
+              console.error(`   Poll error details:`, {
+                message: pollError?.message,
+                status: pollError?.status,
+                statusCode: pollError?.statusCode
+              });
               break;
             }
           } else {
-            console.warn(`   No response ID found, cannot poll`);
+            console.warn(`   No response ID found, cannot poll further`);
             break;
           }
         }
@@ -97,9 +129,10 @@ export async function createResponse(
         const apiTime = Date.now() - apiStartTime;
         console.log(`   Responses API call completed in ${apiTime}ms after ${pollCount} polls`);
         console.log(`   Final response status: ${response?.status || 'unknown'}`);
+        console.log(`   Response keys: ${response ? Object.keys(response).join(', ') : 'none'}`);
         
-        // Hämta content från response
-        const content = response?.output_text || response?.output?.text || '';
+        // Hämta content från response - kontrollera flera möjliga fält
+        const content = response?.output_text || response?.output?.text || response?.output_text || '';
         
         if (content && response?.status === 'complete') {
           console.log(`✅ OpenAI API call successful (model: ${model}${options.enableWebSearch ? ' with web search' : ''}), content length: ${content.length}`);
@@ -108,11 +141,17 @@ export async function createResponse(
             provider: 'openai'
           };
         } else {
-          console.warn(`⚠️  OpenAI API call returned empty content or incomplete status. Status: ${response?.status}, Content length: ${content.length}`);
+          const errorMsg = `OpenAI API call returned empty content or incomplete status. Status: ${response?.status || 'unknown'}, Content length: ${content.length}`;
+          console.warn(`⚠️  ${errorMsg}`);
           if (response?.error) {
-            console.warn(`   Response error:`, response.error);
+            console.warn(`   Response error:`, JSON.stringify(response.error, null, 2));
           }
-          // Fortsätt till fallback
+          if (response?.status === 'failed') {
+            console.error(`   Response failed:`, response.error || 'Unknown error');
+            throw new Error(`Responses API failed: ${response.error?.message || 'Unknown error'}`);
+          }
+          // Fortsätt till fallback om status inte är 'complete'
+          throw new Error(errorMsg);
         }
       } else {
         // Chat completions API för äldre modeller
