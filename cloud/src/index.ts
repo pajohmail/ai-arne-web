@@ -3,6 +3,7 @@ import { runGeneralNewsManager } from './agents/generalNewsManager.js';
 import { createResponse } from './services/responses.js';
 import { saveUserQuestion } from './services/upsert.js';
 import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 
 export async function apiNewsHandler(req: any, res: any) {
   try {
@@ -154,66 +155,81 @@ Kom ihåg: Använd websökningar för att hitta aktuell information från ${curr
 
 Skriv en längre, mer detaljerad artikel (MINST 500 ord, gärna 600-800 ord) som är både informativ och underhållande. Var inte rädd för att vara långrandig - läsaren vill ha djupgående information. Inkludera exempel, jämförelser och relevanta sammanhang. Använd ironi och svenska humor flitigt för att göra läsningen mer engagerande.`;
 
-    // Använd Anthropic med web search för att generera svar (prioritera Anthropic för web search)
-    // Försök först med Anthropic om API-nyckel finns, annars fallback till OpenAI
-    const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+    // Prioritera OpenAI med web search för att generera svar
+    // OpenAI har web_search_preview tool som fungerar bättre än Anthropic
     const openaiApiKey = process.env.OPENAI_API_KEY;
+    const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
     let response;
     
-    console.log(`🔍 API keys check - Anthropic: ${anthropicApiKey ? '✅' : '❌'}, OpenAI: ${openaiApiKey ? '✅' : '❌'}`);
+    console.log(`🔍 API keys check - OpenAI: ${openaiApiKey ? '✅' : '❌'}, Anthropic: ${anthropicApiKey ? '✅' : '❌'}`);
     
-    if (anthropicApiKey) {
-      console.log(`🌐 Using Anthropic API with web search enabled`);
-      const anthropic = new Anthropic({ apiKey: anthropicApiKey });
+    if (openaiApiKey) {
+      console.log(`🌐 Using OpenAI API with web search enabled`);
+      const openai = new OpenAI({ apiKey: openaiApiKey });
       
       try {
-        // Försök först utan web_search tool för att testa om API-nyckeln fungerar
-        // Om det fungerar, kan vi sedan aktivera web_search
-        console.log(`   Testing Anthropic API connection...`);
-        const message = await anthropic.messages.create({
-          model: 'claude-3-5-sonnet-20241022',
-          max_tokens: 2000,
-          // Temporärt inaktiverat web_search för att testa grundläggande anslutning
-          // tools: [{
-          //   type: 'web_search_20250305',
-          //   name: 'web_search',
-          //   max_uses: 5
-          // }],
-          messages: [{
-            role: 'user',
-            content: prompt
-          }]
-        });
+        // Använd Responses API med web_search_preview tool för web search
+        // Responses API kräver gpt-5 modeller, inte gpt-4o
+        console.log(`   Making OpenAI Responses API call with web_search_preview tool...`);
+        const requestOptions: any = {
+          model: 'gpt-5', // Responses API kräver gpt-5 modeller
+          input: prompt,
+          max_output_tokens: 2000,
+          tools: [{ type: 'web_search_preview' }]
+        };
         
-        console.log(`📥 Anthropic response received, content blocks: ${message.content.length}`);
+        const apiStartTime = Date.now();
+        let responseAPI = await (openai as any).responses.create(requestOptions);
+        console.log(`   Initial response status: ${responseAPI?.status || 'unknown'}`);
         
-        // Hantera olika typer av content blocks (text, tool_use, etc.)
-        let content = '';
-        let toolUsed = false;
-        for (const block of message.content) {
-          if (block.type === 'text') {
-            content += block.text;
-          } else if (block.type === 'tool_use') {
-            toolUsed = true;
-            console.log(`🔧 Tool use detected: ${block.name}, id: ${block.id}`);
-            // Om web search tool används, vänta på resultat
-            if (block.name === 'web_search') {
-              console.log(`🌐 Web search tool was used! Query: ${(block as any).input?.query || 'N/A'}`);
+        // Responses API är asynkront - polla tills status är "complete"
+        let pollCount = 0;
+        const maxPolls = 60; // Max 60 polls (5 minuter med 5 sekunders intervall)
+        const pollInterval = 5000; // 5 sekunder mellan polls
+        
+        while (responseAPI?.status === 'incomplete' && pollCount < maxPolls) {
+          pollCount++;
+          console.log(`   Polling response (attempt ${pollCount}/${maxPolls}), status: ${responseAPI.status}`);
+          
+          // Vänta innan nästa poll
+          await new Promise(resolve => setTimeout(resolve, pollInterval));
+          
+          // Hämta uppdaterad response med response ID
+          if (responseAPI?.id) {
+            try {
+              responseAPI = await (openai as any).responses.retrieve(responseAPI.id);
+            } catch (pollError: any) {
+              console.error(`   Poll error:`, pollError?.message);
+              break;
             }
+          } else {
+            console.warn(`   No response ID found, cannot poll`);
+            break;
           }
         }
         
-        if (content) {
-          console.log(`✅ Anthropic API call successful${toolUsed ? ' with tool usage' : ''}, content length: ${content.length}`);
+        const apiTime = Date.now() - apiStartTime;
+        console.log(`   Responses API call completed in ${apiTime}ms after ${pollCount} polls`);
+        console.log(`   Final response status: ${responseAPI?.status || 'unknown'}`);
+        
+        // Hämta content från response
+        const content = responseAPI?.output_text || responseAPI?.output?.text || '';
+        
+        if (content && responseAPI?.status === 'complete') {
+          console.log(`✅ OpenAI Responses API call successful with web search, content length: ${content.length}`);
           response = {
             content,
-            provider: 'anthropic' as const
+            provider: 'openai' as const
           };
         } else {
-          throw new Error('No text content in Anthropic response');
+          console.warn(`⚠️  OpenAI API call returned empty content or incomplete status. Status: ${responseAPI?.status}, Content length: ${content.length}`);
+          if (responseAPI?.error) {
+            console.warn(`   Response error:`, responseAPI.error);
+          }
+          throw new Error(`OpenAI Responses API returned incomplete status: ${responseAPI?.status || 'unknown'}`);
         }
       } catch (error: any) {
-        console.error('❌ Anthropic API failed:', error?.message || error);
+        console.error('❌ OpenAI API failed:', error?.message || error);
         console.error('   Error details:', JSON.stringify({
           message: error?.message,
           status: error?.status,
@@ -221,22 +237,65 @@ Skriv en längre, mer detaljerad artikel (MINST 500 ord, gärna 600-800 ord) som
           type: error?.type,
           code: error?.code
         }, null, 2));
-        // Fallback till OpenAI om Anthropic misslyckas
-        console.log(`🔄 Falling back to OpenAI...`);
-        response = await createResponse(prompt, {
-          model: 'gpt-5-mini',
-          maxTokens: 2000,
-          temperature: 0.8
+        
+        // Fallback till Anthropic om OpenAI misslyckas
+        if (anthropicApiKey) {
+          console.log(`🔄 Falling back to Anthropic...`);
+          const anthropic = new Anthropic({ apiKey: anthropicApiKey });
+          try {
+            const message = await anthropic.messages.create({
+              model: 'claude-3-5-sonnet-20241022',
+              max_tokens: 2000,
+              messages: [{
+                role: 'user',
+                content: prompt
+              }]
+            });
+            const anthropicContent = message.content[0]?.type === 'text' ? message.content[0].text : '';
+            if (anthropicContent) {
+              response = {
+                content: anthropicContent,
+                provider: 'anthropic' as const
+              };
+            } else {
+              throw new Error('No content in Anthropic response');
+            }
+          } catch (anthropicError: any) {
+            console.error('❌ Anthropic fallback also failed:', anthropicError?.message);
+            throw error; // Throw original OpenAI error
+          }
+        } else {
+          throw error;
+        }
+      }
+    } else if (anthropicApiKey) {
+      console.log(`⚠️  OpenAI API key not found, using Anthropic`);
+      // Använd Anthropic om OpenAI inte är tillgänglig
+      const anthropic = new Anthropic({ apiKey: anthropicApiKey });
+      try {
+        const message = await anthropic.messages.create({
+          model: 'claude-3-5-sonnet-20241022',
+          max_tokens: 2000,
+          messages: [{
+            role: 'user',
+            content: prompt
+          }]
         });
+        const content = message.content[0]?.type === 'text' ? message.content[0].text : '';
+        if (content) {
+          response = {
+            content,
+            provider: 'anthropic' as const
+          };
+        } else {
+          throw new Error('No content in Anthropic response');
+        }
+      } catch (error: any) {
+        console.error('❌ Anthropic API failed:', error?.message);
+        throw error;
       }
     } else {
-      console.log(`⚠️  Anthropic API key not found, using OpenAI`);
-      // Använd OpenAI om Anthropic inte är tillgänglig
-      response = await createResponse(prompt, {
-        model: 'gpt-5-mini',
-        maxTokens: 2000,
-        temperature: 0.8
-      });
+      throw new Error('No API keys available');
     }
     
     const contentLength = response.content.length;

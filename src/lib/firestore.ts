@@ -1,4 +1,4 @@
-import { fetchWithTimeout, getJsonCached } from './fetch';
+  import { fetchWithTimeout, getJsonCached } from './fetch';
 
 export type TimestampLike = string | undefined;
 

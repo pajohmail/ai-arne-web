@@ -11,6 +11,7 @@ export interface ResponsesAPIOptions {
   model?: string;
   maxTokens?: number;
   temperature?: number;
+  enableWebSearch?: boolean; // Aktivera web search för Responses API
 }
 
 export interface ResponsesAPIResponse {
@@ -44,8 +45,7 @@ export async function createResponse(
         // Responses API syntax för gpt-5/gpt-5-mini
         const requestOptions: any = {
           model,
-          input: prompt,
-          timeout: 120000 // 120 sekunder timeout för Responses API
+          input: prompt
         };
         
         // Responses API använder max_output_tokens
@@ -53,19 +53,66 @@ export async function createResponse(
           requestOptions.max_output_tokens = options.maxTokens;
         }
         
-        console.log(`   Making Responses API call with timeout: 120s`);
-        const apiStartTime = Date.now();
-        const response = await (openai as any).responses.create(requestOptions);
-        const apiTime = Date.now() - apiStartTime;
-        console.log(`   Responses API call completed in ${apiTime}ms`);
-        const content = response.output_text || '';
+        // Aktivera web search om det är begärt
+        if (options.enableWebSearch) {
+          requestOptions.tools = [{ type: 'web_search_preview' }];
+          console.log(`   Making Responses API call with web_search_preview tool enabled`);
+        } else {
+          console.log(`   Making Responses API call`);
+        }
         
-        if (content) {
-          console.log(`✅ OpenAI API call successful (model: ${model})`);
+        // Responses API timeout (om det stöds)
+        requestOptions.timeout = 300000; // 5 minuter timeout
+        
+        const apiStartTime = Date.now();
+        let response = await (openai as any).responses.create(requestOptions);
+        console.log(`   Initial response status: ${response?.status || 'unknown'}`);
+        
+        // Responses API är asynkront - polla tills status är "complete"
+        let pollCount = 0;
+        const maxPolls = 60; // Max 60 polls (5 minuter med 5 sekunders intervall)
+        const pollInterval = 5000; // 5 sekunder mellan polls
+        
+        while (response?.status === 'incomplete' && pollCount < maxPolls) {
+          pollCount++;
+          console.log(`   Polling response (attempt ${pollCount}/${maxPolls}), status: ${response.status}`);
+          
+          // Vänta innan nästa poll
+          await new Promise(resolve => setTimeout(resolve, pollInterval));
+          
+          // Hämta uppdaterad response med response ID
+          if (response?.id) {
+            try {
+              response = await (openai as any).responses.retrieve(response.id);
+            } catch (pollError: any) {
+              console.error(`   Poll error:`, pollError?.message);
+              break;
+            }
+          } else {
+            console.warn(`   No response ID found, cannot poll`);
+            break;
+          }
+        }
+        
+        const apiTime = Date.now() - apiStartTime;
+        console.log(`   Responses API call completed in ${apiTime}ms after ${pollCount} polls`);
+        console.log(`   Final response status: ${response?.status || 'unknown'}`);
+        
+        // Hämta content från response
+        const content = response?.output_text || response?.output?.text || '';
+        
+        if (content && response?.status === 'complete') {
+          console.log(`✅ OpenAI API call successful (model: ${model}${options.enableWebSearch ? ' with web search' : ''}), content length: ${content.length}`);
           return {
             content,
             provider: 'openai'
           };
+        } else {
+          console.warn(`⚠️  OpenAI API call returned empty content or incomplete status. Status: ${response?.status}, Content length: ${content.length}`);
+          if (response?.error) {
+            console.warn(`   Response error:`, response.error);
+          }
+          // Fortsätt till fallback
         }
       } else {
         // Chat completions API för äldre modeller
@@ -114,15 +161,10 @@ export async function createResponse(
       console.log(`🔄 Falling back to Anthropic API (OpenAI failed or not available)`);
       const anthropic = new Anthropic({ apiKey: anthropicApiKey });
       
-      // Aktivera web search tool om det är tillgängligt
+      // Anthropic fallback (utan web search tool eftersom det inte fungerar korrekt)
       const message = await anthropic.messages.create({
         model: 'claude-3-5-sonnet-20241022',
         max_tokens: options.maxTokens || 1000,
-        tools: [{
-          type: 'web_search_20250305',
-          name: 'web_search',
-          max_uses: 5
-        }],
         messages: [{
           role: 'user',
           content: prompt

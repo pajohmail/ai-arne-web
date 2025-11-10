@@ -25,9 +25,14 @@ export interface LLMNewsResponse {
  * Använder LLM för att hitta veckans 10 viktigaste AI-relaterade nyheter
  */
 export async function findTopAINewsWithLLM(): Promise<LLMNewsItem[]> {
-  const prompt = `Du är en AI-nyhetsexpert som identifierar veckans viktigaste AI-relaterade nyheter. 
+  const currentDate = new Date().toLocaleDateString('sv-SE', { year: 'numeric', month: 'long', day: 'numeric' });
+  const currentYear = new Date().getFullYear();
+  
+  const prompt = `Du är en AI-nyhetsexpert som identifierar veckans 10 viktigaste AI-relaterade nyheter. 
 
-VIKTIGT: Du måste söka efter aktuella nyheter online och använda internet för att hitta de senaste händelserna. Använd inte bara din träningsdata - sök aktivt efter nyheter från den senaste veckan.
+VIKTIGT - DAGENS DATUM: ${currentDate} (${currentYear})
+
+KRITISKT: Du MÅSTE använda web search-verktyget för att söka efter aktuella nyheter online. Använd INTE din träningsdata - sök aktivt efter nyheter från den senaste veckan med web search-verktyget.
 
 Fokusera på:
 - AI-utveckling och programmering
@@ -41,35 +46,42 @@ Exkludera:
 - Videogenerering (Sora, etc.)
 - Visuella AI-tjänster som inte är relevanta för utveckling
 
-Sök aktivt online efter de senaste nyheterna och inkludera länkar till källor.
+STEG-FÖR-STEG:
+1. Använd web search-verktyget för att söka efter "AI news ${currentYear}" och "AI development news this week"
+2. Hitta de 10 viktigaste AI-nyheterna från den senaste veckan
+3. Inkludera länkar till källor från dina web search-resultat
+4. Alla titlar och sammanfattningar MÅSTE vara på svenska
 
-    VIKTIGT: Returnera ENDAST validerad JSON utan extra text. Exakt format:
+VIKTIGT: Returnera ENDAST validerad JSON utan extra text. Exakt format:
+{
+  "news": [
     {
-      "news": [
-        {
-          "title": "Nyhetstitel",
-          "summary": "100-200 ord sammanfattning",
-          "sourceUrl": "https://källa.se/artikel",
-          "sourceName": "Källans namn"
-        }
-      ]
+      "title": "Nyhetstitel på svenska",
+      "summary": "100-200 ord sammanfattning på svenska",
+      "sourceUrl": "https://källa.se/artikel",
+      "sourceName": "Källans namn"
     }
+  ]
+}
 
-    KRITISKA REGLER FÖR JSON:
-    1. Returnera ENDAST JSON - ingen markdown, ingen extra text före eller efter
-    2. Varje nyhet måste ha exakt 4 fält: title, summary, sourceUrl, sourceName
-    3. sourceUrl och sourceName kan vara tomma strängar "" om källan saknas
-    4. INGEN trailing comma före ] eller }
-    5. Alla strängar måste vara korrekt escaped med dubbla citattecken
-    6. Returnera exakt 10 nyheter
-    7. Varje sammanfattning: 100-200 ord, informativ
-    8. Kontrollera att JSON är validerad innan du returnerar den`;
+KRITISKA REGLER FÖR JSON:
+1. Returnera ENDAST JSON - ingen markdown, ingen extra text före eller efter
+2. Varje nyhet måste ha exakt 4 fält: title, summary, sourceUrl, sourceName
+3. ALLA titlar och sammanfattningar MÅSTE vara på svenska
+4. sourceUrl och sourceName kan vara tomma strängar "" om källan saknas
+5. INGEN trailing comma före ] eller }
+6. Alla strängar måste vara korrekt escaped med dubbla citattecken
+7. Returnera exakt 10 nyheter
+8. Varje sammanfattning: 100-200 ord, informativ, på svenska
+9. Kontrollera att JSON är validerad innan du returnerar den`;
 
   try {
+    console.log(`🔍 Finding top 10 AI news with web search enabled...`);
     const response = await createResponse(prompt, {
-      model: 'gpt-5-mini',
-      maxTokens: 3000,
-      temperature: 0.7
+      model: 'gpt-5', // Använd gpt-5 för bäst träffsäkerhet
+      maxTokens: 4000, // Öka för att hantera 10 nyheter
+      temperature: 0.7,
+      enableWebSearch: true // Aktivera web search
     });
     
     console.log(`📰 LLM news search completed using ${response.provider} API`);
@@ -273,20 +285,22 @@ Titel: ${newsItem.title}
 Sammanfattning: ${newsItem.summary}
 Källa: ${newsItem.sourceName}
 
-VIKTIGT: Skriv en omarbetad sammanfattning på 100-200 ord som:
+VIKTIGT: Skriv en omarbetad artikel på 500-800 ord (MINST 500 ord, gärna 600-800 ord) som:
 - Behåller all viktig information från originalnyheten
 - Är underhållande och engagerande att läsa
-- Har en tydlig ironisk touch och svenska humor
+- Har en tydlig ironisk touch och svenska humor genom HELA texten
 - Är informativ men rolig
 - Använder ironi och humor flitigt men respekterar faktan
-- Om möjligt, sök efter mer information online om nyheten för att ge mer kontext och detaljer
+- Inkluderar kontext, bakgrundsinformation och relevanta detaljer
+- Är skriven på svenska med svenska humor och ironi
+- Var inte rädd för att vara långrandig - läsaren vill ha djupgående information
 
-Skriv sammanfattningen direkt utan extra formatering.`;
+Skriv artikeln direkt utan extra formatering. Använd paragraf-struktur med tydliga avsnitt.`;
 
   try {
     const response = await createResponse(prompt, {
       model: 'gpt-5-mini',
-      maxTokens: 500,
+      maxTokens: 2000, // Öka från 500 till 2000 för längre texter (500-800 ord)
       temperature: 0.8 // Högre temperatur för mer kreativitet och humor
     });
     
@@ -294,16 +308,29 @@ Skriv sammanfattningen direkt utan extra formatering.`;
 
     const rewrittenSummary = response.content.trim();
     
-    // Skapa HTML-innehåll
+    // Konvertera text till HTML-paragrafstruktur
+    // Dela upp texten i paragraf baserat på dubbel radbrytning
+    const paragraphs = rewrittenSummary
+      .split(/\n\n+/)
+      .map(p => p.trim())
+      .filter(p => p.length > 0);
+    
+    // Skapa HTML-innehåll - kodar endast textinnehåll, inte HTML-strukturen
+    // Varje paragraf blir en <p> tag med kodat textinnehåll
+    const htmlParagraphs = paragraphs.map(p => {
+      // Koda textinnehållet för att undvika XSS, men behåll HTML-strukturen
+      return `<p>${sanitizeHtml(p)}</p>`;
+    });
+    
     const htmlContent = [
       `<p><strong>${sanitizeHtml(newsItem.title)}</strong></p>`,
-      `<p>${sanitizeHtml(rewrittenSummary)}</p>`,
+      ...htmlParagraphs,
       newsItem.sourceUrl ? `<p>Källa: <a href="${sanitizeHtml(newsItem.sourceUrl)}" rel="noopener" target="_blank">${sanitizeHtml(newsItem.sourceName || newsItem.sourceUrl)}</a></p>` : `<p>Källa: ${sanitizeHtml(newsItem.sourceName || 'Okänd')}</p>`
-    ].join('');
+    ].join('\n');
 
     return {
       title: sanitizeHtml(newsItem.title),
-      content: htmlContent,
+      content: htmlContent, // HTML-innehåll med korrekt formatering
       excerpt: sanitizeHtml(rewrittenSummary.slice(0, 280)),
       sourceUrl: newsItem.sourceUrl || '',
       source: newsItem.sourceName || 'LLM-sökning'
@@ -312,11 +339,18 @@ Skriv sammanfattningen direkt utan extra formatering.`;
     console.error(`Failed to rewrite news with AI, using original:`, error);
     
     // Fallback till original om AI-omarbetning misslyckas
+    // Konvertera summary till paragrafstruktur
+    const fallbackParagraphs = newsItem.summary
+      .split(/\n\n+/)
+      .map(p => p.trim())
+      .filter(p => p.length > 0)
+      .map(p => `<p>${sanitizeHtml(p)}</p>`);
+    
     const fallbackHtml = [
       `<p><strong>${sanitizeHtml(newsItem.title)}</strong></p>`,
-      `<p>${sanitizeHtml(newsItem.summary)}</p>`,
+      ...fallbackParagraphs,
       newsItem.sourceUrl ? `<p>Källa: <a href="${sanitizeHtml(newsItem.sourceUrl)}" rel="noopener" target="_blank">${sanitizeHtml(newsItem.sourceName || newsItem.sourceUrl)}</a></p>` : `<p>Källa: ${sanitizeHtml(newsItem.sourceName || 'Okänd')}</p>`
-    ].join('');
+    ].join('\n');
     
     return {
       title: sanitizeHtml(newsItem.title),
