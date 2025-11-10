@@ -53,10 +53,10 @@ export async function createResponse(
           requestOptions.max_output_tokens = options.maxTokens;
         }
         
-        // Temperature för kreativitet (om angiven)
-        if (options.temperature !== undefined) {
-          requestOptions.temperature = options.temperature;
-        }
+        // Temperature stöds INTE med Responses API - kommenterat ut
+        // if (options.temperature !== undefined) {
+        //   requestOptions.temperature = options.temperature;
+        // }
         
         // Aktivera web search om det är begärt
         if (options.enableWebSearch) {
