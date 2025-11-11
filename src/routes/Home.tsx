@@ -1,42 +1,6 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import Seo from '../components/Seo';
-import { EmptyState, ErrorState, Skeleton } from '../components/States';
-import { mapPost, mapNews, mapTutorial, queryCollection } from '../lib/firestore';
 
 export default function Home() {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [posts, setPosts] = useState<any[]>([]);
-  const [news, setNews] = useState<any[]>([]);
-  const [tutorials, setTutorials] = useState<any[]>([]);
-
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        setError(null);
-        setLoading(true);
-        const [postsData, newsData, tutorialsData] = await Promise.all([
-          queryCollection({ collectionId: 'posts', orderByCreatedAtDesc: true, limit: 3 }),
-          queryCollection({ collectionId: 'news', orderByCreatedAtDesc: true, limit: 3 }),
-          queryCollection({ collectionId: 'tutorials', orderByCreatedAtDesc: true, limit: 3 })
-        ]);
-        if (mounted) {
-          setPosts(postsData.map(mapPost).filter(Boolean));
-          setNews(newsData.map(mapNews).filter(Boolean));
-          setTutorials(tutorialsData.map(mapTutorial).filter(Boolean));
-        }
-      } catch {
-        setError('Kunde inte hämta data.');
-      } finally {
-        setLoading(false);
-      }
-    })();
-
-    return () => { mounted = false; };
-  }, []);
-
   return (
     <div className="space-y-8">
       <Seo title="AI‑Arne – Start" description="Uppdragsbaserad AI-driven Inlärning" />
