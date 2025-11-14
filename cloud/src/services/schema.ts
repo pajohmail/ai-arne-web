@@ -18,7 +18,9 @@ export const COLLECTIONS = {
   /** News (allmänna AI-nyheter) */
   news: 'news',
   /** User questions (användarfrågor från chatten) */
-  user_questions: 'user_questions'
+  user_questions: 'user_questions',
+  /** Error logs (felrapporter från agenter) */
+  errorLogs: 'errorLogs'
 } as const;
 
 /** Type för collection-namn */
@@ -73,5 +75,17 @@ export interface UserQuestionDoc {
   question: string;
   sessionId?: string; // Valfritt för anonyma användare
   createdAt: any;
+}
+
+/**
+ * Dokumentstruktur för error logs
+ */
+export interface ErrorLogDoc {
+  timestamp: any; // Firestore server timestamp
+  context: string; // Vilken agent/handler (t.ex. "apiNewsHandler", "generalNewsHandler")
+  message: string; // Felmeddelande
+  stack: string | null; // Stack trace om tillgänglig
+  metadata: Record<string, any>; // Extra information (t.ex. force flag, processed count, etc.)
+  severity: 'error' | 'warning'; // Feltyp
 }
 

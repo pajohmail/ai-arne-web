@@ -9,7 +9,8 @@
  * @module generalNewsManager
  */
 
-import { findTopAINewsWithLLM, processAndUpsertNews } from './generalNewsAgent.js';
+import { findTopAINewsWithLLM, rewriteNewsWithAI } from './generalNewsAgent.js';
+import { upsertGeneralNews } from '../services/upsert.js';
 import { postToLinkedIn } from '../services/linkedin.js';
 import { withFirestore } from '../services/firestore.js';
 import { COLLECTIONS } from '../services/schema.js';
@@ -102,8 +103,11 @@ Skriv sammanfattningen direkt utan extra formatering.`;
  * 
  * Funktionen koordinerar hela processen:
  * 1. Hittar veckans 10 viktigaste AI-nyheter via LLM med web search
- * 2. Bearbetar varje nyhet (omarbetar med AI, sparar i Firestore)
+ * 2. Bearbetar varje nyhet sekvensiellt (omarbetar med AI, sparar i Firestore)
  * 3. Genererar och publicerar LinkedIn-inlägg med sammanfattning
+ * 
+ * Bearbetar nyheter sekvensiellt för att säkerställa att åtminstone några nyheter
+ * sparas även om processen timar ut. Varje nyhet sparas direkt efter bearbetning.
  * 
  * @param options - Konfigurationsalternativ
  * @param options.force - Om true, hoppar över eventuella "har redan kört idag"-kontroller
@@ -134,13 +138,47 @@ export async function runGeneralNewsManager({ force = false }: { force?: boolean
       return { processed: 0, error: 'No news items found' };
     }
 
-    console.log('Processing and upserting news items...');
+    console.log('Processing and upserting news items sequentially (one at a time)...');
     
-    // Bearbeta och spara nyheter - får tillbaka de faktiska sparade objekten
-    processedNews = await processAndUpsertNews(newsItems);
-    processed = processedNews.length;
+    // Bearbeta nyheter sekvensiellt - en i taget
+    // Detta säkerställer att varje nyhet sparas direkt efter bearbetning,
+    // så att åtminstone några nyheter sparas även om processen timar ut
+    for (const newsItem of newsItems) {
+      try {
+        console.log(`Processing news item ${processed + 1}/${newsItems.length}: ${newsItem.title}`);
+        
+        // Omarbeta nyheten med AI för att göra den underhållande
+        const processedItem = await rewriteNewsWithAI(newsItem);
+        console.log(`Rewritten news item: ${processedItem.title}, content length: ${processedItem.content.length}`);
+        
+        // Spara i databas direkt
+        const result = await upsertGeneralNews(processedItem);
+        console.log(`Upserted news item: ${result.id}, slug: ${result.slug}, updated: ${result.updated}`);
+        
+        // Lägg till det faktiska objektet med all data
+        processedNews.push({
+          id: result.id,
+          slug: result.slug,
+          title: processedItem.title,
+          sourceUrl: processedItem.sourceUrl,
+          content: processedItem.content,
+          excerpt: processedItem.excerpt
+        });
+        
+        processed++;
+        console.log(`✅ Successfully processed ${processed}/${newsItems.length} news items`);
+      } catch (error: any) {
+        console.error(`Failed to process news item "${newsItem.title}":`, error);
+        console.error(`Error details:`, {
+          message: error?.message,
+          stack: error?.stack
+        });
+        // Fortsätt med nästa nyhet även om denna misslyckas
+        console.log(`Continuing with next news item...`);
+      }
+    }
     
-    console.log(`Processed ${processed} news items`);
+    console.log(`Processed ${processed} out of ${newsItems.length} news items`);
   } catch (error: any) {
     console.error('Failed to run general news manager:', error);
     console.error('Error details:', {
@@ -148,7 +186,9 @@ export async function runGeneralNewsManager({ force = false }: { force?: boolean
       stack: error?.stack,
       name: error?.name
     });
-    return { processed: 0, error: error?.message || 'Unknown error' };
+    // Returnera antal bearbetade nyheter även om det uppstod ett fel
+    // Detta säkerställer att delvis resultat returneras vid timeout
+    return { processed, error: error?.message || 'Unknown error' };
   }
 
   // Publicera på LinkedIn (hoppa över om credentials är placeholders)

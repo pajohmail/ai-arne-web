@@ -132,10 +132,12 @@ KRITISKA REGLER FÖR JSON:
 
   try {
     console.log(`🔍 Finding top 10 AI news with web search enabled...`);
+    // OBS: Temperature stöds inte för Responses API (gpt-5 modeller)
+    // Temperature-parametern ignoreras automatiskt av createResponse för GPT-5
     const response = await createResponse(prompt, {
       model: 'gpt-5', // Använd gpt-5 för bäst träffsäkerhet
-      maxTokens: 2500, // Minskat från 4000 - räcker för 10 nyheter med 100-200 ord var
-      temperature: 0.7,
+      maxTokens: 12000, // Ökad för att hantera 10 nyheter med web search (100-200 ord per nyhet + JSON-struktur)
+      temperature: 0.7, // Ignoreras för Responses API, men behålls för dokumentation
       enableWebSearch: true // Aktivera web search
     });
     
@@ -250,10 +252,12 @@ Skriv en kort nyhetsnotis på 300-500 ord (gärna runt 400 ord) som:
 Skriv nyhetsnotisen direkt utan extra formatering. Använd paragraf-struktur med tydliga avsnitt.`;
 
   try {
+    // OBS: Temperature stöds inte för Responses API (gpt-5 modeller)
+    // Temperature-parametern ignoreras automatiskt av createResponse för GPT-5
     const response = await createResponse(prompt, {
       model: 'gpt-5-mini',
-      maxTokens: 1500, // För 300-500 ord texter
-      temperature: 0.8, // Högre temperatur för mer kreativitet och humor
+      maxTokens: 2000, // För 300-500 ord texter med web search
+      temperature: 0.8, // Ignoreras för Responses API, men behålls för dokumentation
       enableWebSearch: true // Aktivera web search för att komplettera nyheten
     });
     

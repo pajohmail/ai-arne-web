@@ -8,9 +8,21 @@ body{margin:0;background:#000;color:#111;font-family:system-ui,-apple-system,Seg
 .bar-inner{max-width:960px;margin:0 auto;padding:0 16px;display:flex;align-items:center;justify-content:space-between;width:100%}
 .brand{display:flex;align-items:center;gap:12px;color:#fff;text-decoration:none;font-weight:600}
 .brand img{display:block}
-.main-nav{display:flex;gap:16px}
+.main-nav{display:flex;gap:16px;align-items:center}
 .main-nav a{color:#fff;text-decoration:none}
 .main-nav a:hover, .main-nav a:focus{text-decoration:underline}
+
+/* Dropdown styles */
+.dropdown{position:relative}
+.dropdown-toggle{background:none;border:none;color:#fff;cursor:pointer;font-size:inherit;font-family:inherit;padding:0;text-decoration:none;display:flex;align-items:center;gap:4px}
+.dropdown-toggle:hover,.dropdown-toggle:focus{text-decoration:underline;outline:none}
+.dropdown-toggle::after{content:"▼";font-size:0.7em;margin-left:4px;transition:transform 0.2s}
+.dropdown[aria-expanded="true"] .dropdown-toggle::after{transform:rotate(180deg)}
+.dropdown-menu{position:absolute;top:100%;left:0;background:#000;border:1px solid #333;border-radius:4px;min-width:180px;margin-top:8px;z-index:1000;box-shadow:0 4px 6px rgba(0,0,0,0.3)}
+.dropdown-menu a{display:block;padding:10px 16px;color:#fff;text-decoration:none;border-bottom:1px solid #333}
+.dropdown-menu a:last-child{border-bottom:none}
+.dropdown-menu a:hover,.dropdown-menu a:focus{background:#222;text-decoration:none}
+.dropdown-menu a.active{background:#333;font-weight:600}
 
 .container{max-width:960px;margin:8px auto 16px;padding:16px;background:#fff;color:#111;border-radius:8px}
 

@@ -6,6 +6,21 @@ export default function Home() {
       <Seo title="AI‑Arne – Start" description="Uppdragsbaserad AI-driven Inlärning" />
       
       <article className="space-y-8">
+        <section>
+          <p>
+            Vi befinner oss mitt i det största informationstekniska paradigmskiftet sedan någon kom på idén att stapla böcker i ett bibliotek och kalla det civilisation. Vad vi menar med "kunskap" måste omdefinieras. Det handlar inte längre om att minnas textstycken, rabbla definitioner eller – i bästa fall – skrapa ihop en egen förståelse. I dag krävs något helt annat: förmågan att söka rätt information, vara källkritisk och se helheten utan att gå vilse i detaljerna.
+          </p>
+          <p>
+            Problemet? Våra utbildningssystem har inte riktigt hunnit med. Jag har precis avslutat 1,5 år av YH- och högskolestudier och kan konstatera att utvecklingen sedan mina universitetsstudier för över två decennier sedan varit… låt oss säga blygsam. Det finns undantag – FEI och KTH levererade tack vare några briljanta personer – men det var mer personligt engagemang än institutionell innovation.
+          </p>
+          <p>
+            Nu går jag in i nästa fas. Jag har funderat över hur jag faktiskt lär mig, och tillsammans med min ständige partner-in-crime ChatGPT har jag tagit fram UAI-metoden (version 1), samt en tutorial för Cursor 2.0. Tanken är enkel: använda metoden i nästa projekt, behålla det som fungerar, kasta det som inte gör det och iterera mig vidare – precis som man bör göra i en värld där utvecklingen har slutat fråga om lov och bara springer.
+          </p>
+          <p>
+            För när AI rör sig snabbare än kursplanerna hinner damma ihop, då fungerar inte längre traditionella upplägg. Det du lär ut i början av kursen är föråldrat innan studenterna hunnit hitta kaffemaskinen. Vill man hänga med måste man samarbeta med sina AI-kompisar.
+          </p>
+        </section>
+
         <h1>Uppdragsbaserad AI-driven Inlärning (UAI-metoden)</h1>
 
         <section>

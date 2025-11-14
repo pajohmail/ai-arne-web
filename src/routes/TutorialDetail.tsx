@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import Seo from '../components/Seo';
 import { EmptyState, ErrorState, Skeleton } from '../components/States';
 import { mapTutorial, queryCollection } from '../lib/firestore';
@@ -71,6 +71,9 @@ export default function TutorialDetail() {
       {item.content && (
         <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(item.content) }} />
       )}
+      <p>
+        <Link to="/tutorial/cursor-2.0" className="btn">Cursor 2.0 Tutorial</Link>
+      </p>
     </article>
   );
 }

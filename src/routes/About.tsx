@@ -14,11 +14,21 @@ export default function About() {
       <p>
         Planen framöver är därför att fokusera mer på egna AI-projekt, vilka jag kommer att lägga upp här på sidan. Själva denna webbplats är faktiskt ett av mina pågående projekt, utvecklad som en del av en YH-kurs, och den drivs av ett molnbaserat AI-agent-system som jag själv byggt.
       </p>
-      <p>
-        Om du vill se mina tidigare projekt — både stora och små — finns de samlade på min GitHub:
-        <br />
-        <a href="https://github.com/pajohmail" target="_blank" rel="noopener noreferrer">👉 github.com/pajohmail</a>
-      </p>
+      
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '24px' }}>
+        <a href="https://github.com/pajohmail" target="_blank" rel="noopener noreferrer" className="btn">
+          GitHub
+        </a>
+        <a href="https://www.linkedin.com/in/perarnejohansson/" target="_blank" rel="noopener noreferrer" className="btn">
+          LinkedIn (Personlig)
+        </a>
+        <a href="https://www.linkedin.com/company/107962435" target="_blank" rel="noopener noreferrer" className="btn">
+          LinkedIn (AI-Arne)
+        </a>
+        <a href="mailto:pajohmail@gmail.com" className="btn">
+          E-post
+        </a>
+      </div>
     </article>
   );
 }

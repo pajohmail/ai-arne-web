@@ -61,8 +61,6 @@ export interface UpsertGeneralNewsArgs {
  * @private
  */
 async function generatePostContentWithAI(release: UpsertNewsArgs): Promise<string> {
-  const title = `[${release.provider.toUpperCase()}] ${release.name}${release.version ? ' ' + release.version : ''}`;
-  
   const prompt = `Du är en AI-nyhetsskribent som skriver om AI-API-utveckling. Skapa en detaljerad artikel på svenska om följande API-release. Skriv på ett underhållande sätt med en tydlig touch av ironi och svenska humor. Använd ironi och svenska humor flitigt genom hela artikeln.
 
 Provider: ${release.provider}
@@ -71,6 +69,8 @@ URL: ${release.url}
 Sammanfattning: ${release.summary || 'Ingen sammanfattning tillgänglig'}
 
 VIKTIGT: Skriv MINST 500 ord. Var inte kortfattad. Undvik korta svar. Var detaljerad och utförlig.
+
+KRITISKT: Inkludera INTE rubrik eller titel i ditt svar. Börja direkt med artikelns innehåll. Rubriken hanteras separat.
 
 KRITISKT: Du MÅSTE söka aktivt online efter aktuell information om denna release. Använd internet för att hitta de senaste nyheterna, artiklar och källor om denna release. Använd INTE bara din träningsdata - sök aktivt efter ny information.
 
@@ -91,8 +91,9 @@ Var underhållande och engagerande - läsaren ska vilja läsa hela artikeln. Anv
     
     const response = await createResponse(prompt, {
       model: 'gpt-5-mini',
-      maxTokens: 2500,
-      temperature: 0.8 // Högre temperatur för mer kreativitet och humor
+      maxTokens: 5000, // Ökad för att hantera långa artiklar (500+ ord) med web search
+      temperature: 0.8, // Ignoreras för Responses API, men behålls för dokumentation
+      enableWebSearch: true // Aktivera web search för att hitta aktuell information
     });
 
     const contentLength = response.content.length;
@@ -106,7 +107,7 @@ Var underhållande och engagerande - läsaren ska vilja läsa hela artikeln. Anv
     }
     
     const aiContent = sanitizeHtml(response.content);
-    return `<p><strong>${title}</strong></p>${aiContent}\n<p>Källa: <a href="${sanitizeHtml(release.url)}" rel="noopener" target="_blank">${sanitizeHtml(release.url)}</a></p>`;
+    return `${aiContent}\n<p>Källa: <a href="${sanitizeHtml(release.url)}" rel="noopener" target="_blank">${sanitizeHtml(release.url)}</a></p>`;
   } catch (error: any) {
     console.error(`❌ Failed to generate post content with AI, using fallback:`, error);
     console.error(`   Error details:`, {
@@ -118,9 +119,9 @@ Var underhållande och engagerande - läsaren ska vilja läsa hela artikeln. Anv
     console.warn(`⚠️  FALLBACK MODE: Using summary instead of AI-generated content`);
     
     // Fallback till manuellt innehåll om AI misslyckas
+    // OBS: Inkludera INTE titel här - den hanteras separat i title-fältet
     return sanitizeHtml(
       [
-        `<p><strong>${title}</strong></p>`,
         `<p>${release.summary}</p>`,
         `<p>Källa: <a href="${release.url}" rel="noopener" target="_blank">${release.url}</a></p>`
       ].join('')

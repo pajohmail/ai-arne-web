@@ -9,12 +9,14 @@
 
 import { runApiNewsManager } from './agents/manager.js';
 import { runGeneralNewsManager } from './agents/generalNewsManager.js';
+import { logErrorToFirestore } from './services/errorLog.js';
 
 /**
  * HTTP handler för API-nyhetsagenten
  * 
+ * OBS: Denna handler ska normalt anropas via managerHandler, inte direkt.
  * Denna handler kör agenten som övervakar API-releases från stora AI-leverantörer
- * (OpenAI, Anthropic, Google) via GitHub API och skapar innehåll i Firestore.
+ * (OpenAI, Google) via GitHub API och skapar innehåll i Firestore.
  * 
  * @param req - Express/Cloud Functions request-objekt
  * @param req.query.force - Om satt till '1', tvingar körning även om den redan körts idag
@@ -34,12 +36,17 @@ import { runGeneralNewsManager } from './agents/generalNewsManager.js';
  */
 export async function apiNewsHandler(req: any, res: any) {
   try {
+    console.warn('⚠️  apiNewsHandler called directly. Consider using managerHandler instead.');
     // Kontrollera om force-flaggan är satt (via query parameter eller body)
     const force = req.query?.force === '1' || req.body?.force === true;
     const result = await runApiNewsManager({ force });
     return res.status(200).json({ ok: true, ...result });
   } catch (err: any) {
     console.error('apiNewsHandler error:', err);
+    // Logga fel till Firestore
+    await logErrorToFirestore(err, 'apiNewsHandler', {
+      force: req.query?.force === '1' || req.body?.force === true
+    });
     return res.status(500).json({ ok: false, error: err?.message || 'unknown error' });
   }
 }
@@ -47,6 +54,7 @@ export async function apiNewsHandler(req: any, res: any) {
 /**
  * HTTP handler för generella nyhetsagenten
  * 
+ * OBS: Denna handler ska normalt anropas via managerHandler, inte direkt.
  * Denna handler kör agenten som använder LLM för att hitta och bearbeta
  * allmänna AI-nyheter från webben, skapar innehåll i Firestore och publicerar på LinkedIn.
  * 
@@ -68,21 +76,26 @@ export async function apiNewsHandler(req: any, res: any) {
  */
 export async function generalNewsHandler(req: any, res: any) {
   try {
+    console.warn('⚠️  generalNewsHandler called directly. Consider using managerHandler instead.');
     // Kontrollera om force-flaggan är satt (via query parameter eller body)
     const force = req.query?.force === '1' || req.body?.force === true;
     const result = await runGeneralNewsManager({ force });
     return res.status(200).json({ ok: true, ...result });
   } catch (err: any) {
     console.error('generalNewsHandler error:', err);
+    // Logga fel till Firestore
+    await logErrorToFirestore(err, 'generalNewsHandler', {
+      force: req.query?.force === '1' || req.body?.force === true
+    });
     return res.status(500).json({ ok: false, error: err?.message || 'unknown error' });
   }
 }
 
 /**
- * HTTP handler för bakåtkompatibilitet - kör både API-nyheter och generella nyheter
+ * HTTP handler för manager - kör både API-nyheter och generella nyheter
  * 
- * Denna handler kör båda agenterna parallellt och returnerar kombinerat resultat.
- * Används för bakåtkompatibilitet med äldre system som förväntar sig en enda endpoint.
+ * Detta är huvudendpointen som ska anropas från Cloud Scheduler. Manager ansvarar
+ * för att köra alla agenter parallellt, samla resultat och logga fel till Firestore.
  * 
  * @param req - Express/Cloud Functions request-objekt
  * @param req.query.force - Om satt till '1', tvingar körning även om den redan körts idag
@@ -97,8 +110,8 @@ export async function generalNewsHandler(req: any, res: any) {
  * // Response format
  * {
  *   "ok": true,
- *   "apiNews": { "processed": 3 },
- *   "generalNews": { "processed": 10 },
+ *   "apiNews": { "success": true, "processed": 3, "error": null },
+ *   "generalNews": { "success": true, "processed": 10, "error": null },
  *   "totalProcessed": 13
  * }
  */
@@ -106,6 +119,8 @@ export async function managerHandler(req: any, res: any) {
   try {
     // Kontrollera om force-flaggan är satt (via query parameter eller body)
     const force = req.query?.force === '1' || req.body?.force === true;
+    
+    console.log('🚀 Manager starting - running all agents in parallel...');
     
     // Kör båda agenterna parallellt med Promise.allSettled för att hantera fel oberoende
     // Detta säkerställer att om en agent misslyckas, fortsätter den andra ändå
@@ -116,20 +131,51 @@ export async function managerHandler(req: any, res: any) {
     
     // Extrahera resultat eller fel från varje agent
     const apiNews = apiResult.status === 'fulfilled' 
-      ? apiResult.value 
-      : { processed: 0, error: apiResult.reason?.message };
+      ? { success: true, processed: apiResult.value.processed || 0, error: null }
+      : { success: false, processed: 0, error: apiResult.reason?.message || 'Unknown error' };
+      
     const generalNews = generalResult.status === 'fulfilled' 
-      ? generalResult.value 
-      : { processed: 0, error: generalResult.reason?.message };
+      ? { success: true, processed: generalResult.value.processed || 0, error: null }
+      : { success: false, processed: 0, error: generalResult.reason?.message || 'Unknown error' };
+    
+    // Logga fel till Firestore om någon agent misslyckades
+    if (!apiNews.success) {
+      const error = apiResult.status === 'rejected' ? apiResult.reason : new Error(apiNews.error || 'Unknown error');
+      console.error('❌ API News Handler failed:', error);
+      await logErrorToFirestore(
+        error,
+        'apiNewsHandler',
+        { force, processed: 0 }
+      );
+    }
+    
+    if (!generalNews.success) {
+      const error = generalResult.status === 'rejected' ? generalResult.reason : new Error(generalNews.error || 'Unknown error');
+      console.error('❌ General News Handler failed:', error);
+      await logErrorToFirestore(
+        error,
+        'generalNewsHandler',
+        { force, processed: 0 }
+      );
+    }
+    
+    const allSuccess = apiNews.success && generalNews.success;
+    const totalProcessed = apiNews.processed + generalNews.processed;
+    
+    console.log(`✅ Manager completed - API News: ${apiNews.success ? '✅' : '❌'}, General News: ${generalNews.success ? '✅' : '❌'}, Total processed: ${totalProcessed}`);
     
     return res.status(200).json({ 
-      ok: true, 
-      apiNews: apiNews,
-      generalNews: generalNews,
-      totalProcessed: (apiNews.processed || 0) + (generalNews.processed || 0)
+      ok: allSuccess,
+      apiNews,
+      generalNews,
+      totalProcessed
     });
   } catch (err: any) {
-    console.error('managerHandler error:', err);
+    console.error('❌ Manager Handler error:', err);
+    // Logga även manager-fel till Firestore
+    await logErrorToFirestore(err, 'managerHandler', {
+      force: req.query?.force === '1' || req.body?.force === true
+    });
     return res.status(500).json({ ok: false, error: err?.message || 'unknown error' });
   }
 }

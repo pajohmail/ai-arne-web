@@ -1,7 +1,24 @@
 <?php
-// Öka execution time limit för att hantera långa AI-anrop (max 3 minuter)
-set_time_limit(180);
-ini_set('max_execution_time', 180);
+/**
+ * Chat API endpoint för AI-Arne
+ * 
+ * Hanterar chat-förfrågningar från webbplatsen och genererar AI-svar
+ * med OpenAI Responses API. Optimerad för snabba svar (200-300 ord, ~30-60 sekunder).
+ * 
+ * @file api/chat.php
+ * @version 2.0
+ * 
+ * Optimeringar:
+ * - Förenklad prompt (200-300 ord istället för 500+)
+ * - max_output_tokens: 1000 (istället för 1500)
+ * - text.verbosity: 'low' för kortare svar
+ * - Automatisk kontroll för kompletta meningar
+ * - Timeout: 120 sekunder (istället för 60)
+ */
+
+// Öka execution time limit för att hantera långa AI-anrop (max 4 minuter)
+set_time_limit(240);
+ini_set('max_execution_time', 240);
 
 // Aktivera error reporting för debugging (ta bort i produktion om det inte behövs)
 error_reporting(E_ALL);
@@ -60,34 +77,50 @@ VIKTIGT - DAGENS DATUM: {$currentDate} ({$currentYear}-{$currentMonth})
 
 Frågan: {$question}
 
-KRITISKA INSTRUKTIONER - LÄS NOGA:
-1. Du HAR tillgång till websökningar - DU MÅSTE använda dem för att hitta de SENASTE nyheterna från {$currentYear}
-2. Gör websökningar för att hitta aktuell information om ämnet - använd ALDRIG bara din träningsdata
-3. Prioritera information från de senaste 3 månaderna ({$currentYear})
-4. Inkludera länkar och källor från dina websökningar
-5. Om informationen är äldre än 6 månader, markera det tydligt
-6. Din träningsdata slutar typ april 2024 - använd ALLTID websökningar för aktuell information
+INSTRUKTIONER:
+- Svara på svenska med ett engagerande och underhållande svar (200-300 ord)
+- Var informativ men koncis - fokusera på det viktigaste
+- Använd ironi och svenska humor för att göra läsningen engagerande
+- Inkludera relevant kontext och bakgrund när det är lämpligt
+- Om informationen är äldre än 6 månader, markera det tydligt
+- Avsluta alltid med en komplett mening - klipp inte mitt i en mening";
 
-VIKTIGT: Skriv MINST 500 ord. Var inte kortfattad. Undvik korta svar. Var detaljerad och utförlig.
-
-STEG-FÖR-STEG PROCESS:
-1. Gör först en websökning om ämnet för att hitta de senaste nyheterna från {$currentYear}
-2. Hitta minst 3-5 aktuella källor från de senaste 3 månaderna
-3. Basera ditt svar PRIMÄRT på dessa websökningar - INTE på din träningsdata
-4. Inkludera länkar till källorna du hittar
-5. Om informationen är äldre än 6 månader, markera det tydligt
-
-Svara på svenska med:
-- Ett engagerande och underhållande svar med en tydlig ironisk touch genom hela texten
-- En detaljerad och informativ förklaring baserat på AKTUELL information från websökningar (MINST 500 ord)
-- Specifika länkar och källor från dina websökningar
-- Datum för när informationen är från (prioritera senaste 3 månaderna från {$currentYear})
-- Om informationen är äldre, markera det tydligt
-- Relevant information om AI-utveckling och nyheter, inklusive kontext och historik när det är lämpligt
-
-Kom ihåg: Använd websökningar för att hitta aktuell information från {$currentYear}. Prioritera information från de senaste 3 månaderna och inkludera länkar till källorna. Använd ALDRIG bara din träningsdata.
-
-Skriv en längre, mer detaljerad artikel (MINST 500 ord, gärna 600-800 ord) som är både informativ och underhållande. Var inte rädd för att vara långrandig - läsaren vill ha djupgående information. Inkludera exempel, jämförelser och relevanta sammanhang. Använd ironi och svenska humor flitigt för att göra läsningen mer engagerande.";
+// Funktion för att säkerställa att texten slutar med en komplett mening
+function ensureCompleteSentence($text) {
+  if (empty($text)) {
+    return $text;
+  }
+  
+  // Trimma bort whitespace
+  $text = rtrim($text);
+  
+  // Om texten redan slutar med en meningsavslutare, returnera som den är
+  $sentenceEnders = ['.', '!', '?', ':', ';'];
+  $lastChar = substr($text, -1);
+  
+  if (in_array($lastChar, $sentenceEnders)) {
+    return $text;
+  }
+  
+  // Om texten inte slutar med en meningsavslutare, hitta sista kompletta meningen
+  // Sök bakåt efter sista meningsavslutare
+  $lastSentenceEnd = -1;
+  foreach ($sentenceEnders as $ender) {
+    $pos = strrpos($text, $ender);
+    if ($pos !== false && $pos > $lastSentenceEnd) {
+      $lastSentenceEnd = $pos;
+    }
+  }
+  
+  // Om vi hittade en meningsavslutare, klipp texten där
+  if ($lastSentenceEnd !== -1) {
+    return substr($text, 0, $lastSentenceEnd + 1);
+  }
+  
+  // Om ingen meningsavslutare hittades, returnera texten som den är
+  // (kan hända om texten är mycket kort eller bara en mening)
+  return $text;
+}
 
 // Funktion för att spara fråga i Firestore
 function saveUserQuestionToFirestore($question, $sessionId = null) {
@@ -146,8 +179,9 @@ $apiUrl = 'https://api.openai.com/v1/responses';
 $requestData = [
   'model' => 'gpt-5-mini', // Använd gpt-5-mini för snabbare svar
   'input' => $prompt,
-  'max_output_tokens' => 1500,
+  'max_output_tokens' => 1000, // Minskat från 1500 för snabbare svar
   'reasoning' => ['effort' => 'low'], // Snabbare svar (enligt OpenAI docs)
+  'text' => ['verbosity' => 'low'], // Kortare svar (Responses API stödjer inte temperature, använd text.verbosity istället)
 ];
 
 // Logga request för debugging (ta bort i produktion)
@@ -167,7 +201,7 @@ curl_setopt($ch, CURLOPT_HTTPHEADER, [
 ]);
 curl_setopt($ch, CURLOPT_POST, true);
 curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($requestData));
-curl_setopt($ch, CURLOPT_TIMEOUT, 60); // 60 sekunder timeout för synkront svar
+curl_setopt($ch, CURLOPT_TIMEOUT, 120); // 120 sekunder timeout för synkront svar
 
 $response = curl_exec($ch);
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -194,11 +228,11 @@ if ($curlError || $httpCode !== 200) {
     $answer = null; // Gå till fallback
   } elseif (isset($responseData['output_text'])) {
     // *** ENKLA VÄGEN - direkt från synkront svar ***
-    $answer = $responseData['output_text'];
+    $answer = ensureCompleteSentence($responseData['output_text']);
     error_log("OpenAI Responses API: Got answer via output_text (length: " . strlen($answer) . ")");
   } elseif (isset($responseData['output'][0]['content'][0]['text'])) {
     // Mer low-level sätt
-    $answer = $responseData['output'][0]['content'][0]['text'];
+    $answer = ensureCompleteSentence($responseData['output'][0]['content'][0]['text']);
     error_log("OpenAI Responses API: Got answer via output[0].content[0].text (length: " . strlen($answer) . ")");
   } else {
     // Logga att svaret inte innehöll text
@@ -222,7 +256,7 @@ if (!$answer) {
       'messages' => [
         ['role' => 'user', 'content' => $prompt]
       ],
-      'max_tokens' => 1500,
+      'max_tokens' => 1000, // Minskat från 1500 för snabbare svar
       'temperature' => 0.8
     ];
     
@@ -271,7 +305,7 @@ if (!$answer) {
       }
       
       if (isset($responseData['choices'][0]['message']['content'])) {
-        $answer = $responseData['choices'][0]['message']['content'];
+        $answer = ensureCompleteSentence($responseData['choices'][0]['message']['content']);
         // Kontrollera om svaret är ett felmeddelande
         if (stripos($answer, 'jag är ledsen') !== false || stripos($answer, 'i cannot') !== false) {
           error_log("OpenAI returned error message in content: " . substr($answer, 0, 200));

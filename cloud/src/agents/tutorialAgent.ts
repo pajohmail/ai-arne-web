@@ -64,6 +64,8 @@ KRITISKA KRAV:
 - Använd din kunskap om API:et, dess dokumentation, och relaterade teknologier
 - Var underhållande med ironisk touch och svenska humor, men håll det pedagogiskt
 
+KRITISKT: Inkludera INTE rubrik eller titel i ditt svar. Börja direkt med tutorialens innehåll. Rubriken hanteras separat.
+
 OBLIGATORISK STRUKTUR (varje sektion måste vara utförlig):
 
 1. INTRODUKTION (MINST 250 ord)
@@ -143,10 +145,13 @@ PEDAGOGISK TON:
 
 Kom ihåg: Detta ska vara en KOMPLETT guide som en utvecklare kan följa från början till slut. Var inte kortfattad - läsaren behöver all information.`;
 
+    // OBS: Temperature stöds inte för Responses API (gpt-5 modeller)
+    // Temperature-parametern ignoreras automatiskt av createResponse för GPT-5
     const response = await createResponse(prompt, {
       model: 'gpt-5-mini',
-      maxTokens: 5000, // Ökad från 3000 för längre tutorials
-      temperature: 0.8 // Ökad temperatur för mer kreativitet och humor
+      maxTokens: 8000, // Ökad för långa tutorials (1500+ ord)
+      temperature: 0.8, // Ignoreras för Responses API, men behålls för dokumentation
+      enableWebSearch: true // Aktivera web search för att hitta aktuell information om API:et
     });
 
     // Logga vilken provider som användes och längd
@@ -166,9 +171,9 @@ Kom ihåg: Detta ska vara en KOMPLETT guide som en utvecklare kan följa från b
     console.error(`Failed to generate tutorial with AI, using static template:`, error);
     
     // Fallback till statisk HTML om AI-generering misslyckas
+    // OBS: Inkludera INTE titel här - den hanteras separat i title-fältet
     html = sanitizeHtml(
       [
-        `<h2>${title}</h2>`,
         `<p>I den här guiden går vi igenom det nya API:et från ${release.provider}.</p>`,
         `<h3>Förutsättningar</h3>`,
         `<ul><li>Konto hos leverantören</li><li>API-nyckel</li><li>Node.js 22+</li></ul>`,

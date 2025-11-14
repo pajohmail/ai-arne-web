@@ -2,7 +2,7 @@
 
 Ett agentsystem som körs på Google Cloud Functions och övervakar AI-API:er från stora leverantörer. Använder Firestore som databas och producerar innehåll som webbplatsen läser direkt från Firestore.
 
-**AI-implementation:** Använder OpenAI:s Responses API (beta) som primär provider med fallback till Anthropic API för robusthet.
+**AI-implementation:** Använder OpenAI:s Responses API (beta) som primär provider. Chat-funktionalitet körs på webservern i PHP för snabbare svar.
 
 ## Arkitektur
 
@@ -18,26 +18,41 @@ Webbplats (läser direkt från Firestore via REST API)
 
 ## Funktioner
 
-- **API-nyhetsagent**: Övervakar API-nyheter från Anthropic, OpenAI och Google AI
-- **RSS-nyhetsagent**: Hämtar allmänna AI-nyheter från RSS-feeds med fokus på utveckling
-  - Använder OpenAI Responses API för AI-baserad sammanfattning och filtrering
-  - Fallback till Anthropic API om OpenAI saknas
+- **API-nyhetsagent**: Övervakar API-nyheter från OpenAI och Google AI
+- **General News-agent**: Hämtar veckans 10 viktigaste AI-nyheter med LLM och web search
+  - Använder OpenAI Responses API (gpt-5) med web search för att hitta aktuella nyheter
+  - Bearbetar nyheter sekvensiellt för att säkerställa att åtminstone några sparas även vid timeout
+  - Omarbetar nyheter med AI för att göra dem underhållande med ironisk touch
 - **Tutorial-agent**: Skapar AI-genererade tutorials för API-nyheter via Responses API
-  - Använder OpenAI Responses API för att generera tutorial-innehåll
+  - Använder OpenAI Responses API för att generera tutorial-innehåll (8000 tokens)
   - Fallback till statisk HTML om API-nycklar saknas
-- **LinkedIn-integration**: Uppdaterar företagsprofil automatiskt
+- **LinkedIn-integration**: Uppdaterar företagsprofil automatiskt med sammanfattning av nyheter
 
-## Responses API och Minneshantering
+## Responses API och AI-integration
 
-Systemet använder OpenAI:s Responses API för tillståndsbevarande konversationer:
+Systemet använder OpenAI:s Responses API (beta) för AI-generering:
 
-- **State Management**: Responses API stödjer conversation_id för att hålla state mellan anrop
-- **Fallback-mekanism**: Automatisk fallback till Anthropic API om OpenAI API-nyckel saknas eller misslyckas
-- **Minneshantering**: Varje konversation får ett unikt conversation_id som kan sparas i Firestore för framtida referens
+- **Responses API**: Används för GPT-5 modeller (gpt-5, gpt-5-mini)
+  - Synkront API som returnerar svar direkt (kan vara `completed` eller `incomplete`)
+  - Stödjer polling för asynkrona svar med `status: 'incomplete'`
+  - Web search kan aktiveras via `tools: [{ type: 'web_search_preview' }]`
+  - Använder `reasoning: { effort: 'low' }` och `text: { verbosity: 'low' }` för snabbare, kortare svar
+  - Stödjer INTE `temperature` - använd `text.verbosity` istället
+- **Chat Completions API**: Används som fallback för äldre modeller (gpt-4.1, gpt-4.1-mini)
+  - Stödjer `temperature` parameter
+- **Felhantering**: Automatisk hantering av `max_output_tokens` - använder delvis innehåll om tillgängligt
+- **Status-hantering**: Korrekt hantering av `status: 'completed'` (inte `'complete'`)
 
 Implementationen finns i `src/services/responses.ts` och används av:
-- `generalNewsAgent.ts` - För sammanfattning av RSS-nyheter
-- `tutorialAgent.ts` - För generering av tutorial-innehåll
+- `generalNewsAgent.ts` - För att hitta och omarbeta AI-nyheter (10 nyheter, 12000 tokens)
+- `tutorialAgent.ts` - För generering av tutorial-innehåll (8000 tokens)
+- `upsert.ts` - För generering av API-nyhetsinnehåll (5000 tokens)
+
+**Chat-funktionalitet:**
+- Chat-logiken körs på webservern i PHP (`api/chat.php`) för snabbare svar
+- Använder OpenAI Responses API direkt med optimerade inställningar
+- Förenklad prompt (200-300 ord) för snabbare svar (~30-60 sekunder istället för ~5 minuter)
+- Automatisk kontroll för att svaret inte klipper mitt i en mening
 
 ## Installation
 
@@ -61,8 +76,7 @@ GOOGLE_CLOUD_PROJECT=your-project-id
 PUBLIC_BASE_URL=https://ai-arne.se
 LINKEDIN_ACCESS_TOKEN=...
 LINKEDIN_ORG_URN=urn:li:organization:...
-RSS_FEEDS=https://feeds.feedburner.com/oreilly/radar,https://techcrunch.com/feed/
-ANTHROPIC_API_KEY=sk-ant-...
+OPENAI_API_KEY=sk-proj-...
 ```
 
 ## Autentisering
@@ -99,11 +113,9 @@ firestore = new Firestore({
 **AI Providers:**
 - **OpenAI Responses API** - API-nyckel från miljövariabel `OPENAI_API_KEY`
   - Primär AI-provider för Responses API (beta)
-  - Används för AI-baserad filtrering, sammanfattning av RSS-nyheter och tutorial-generering
-  - Tillståndsbevarande konversationer med state management
-- **Anthropic API** - API-nyckel från miljövariabel `ANTHROPIC_API_KEY`
-  - Fallback om OpenAI API-nyckel saknas eller misslyckas
-  - Används för AI-baserad filtrering och sammanfattning av RSS-nyheter
+  - Används för AI-baserad filtrering, sammanfattning av nyheter och tutorial-generering
+  - GPT-5 modeller (gpt-5, gpt-5-mini) med web search-stöd
+  - Fallback till Chat Completions API med GPT-4.1 modeller om Responses API misslyckas
 - **Google AI/Gemini** - Används inte direkt (endast publika GitHub API-anrop för releases)
 
 **LinkedIn API:**
@@ -119,17 +131,18 @@ firestore = new Firestore({
 
 **Implementation:**
 ```typescript
-// OpenAI Responses API - Primär provider med fallback till Anthropic
+// OpenAI Responses API - Primär provider
 import { createResponse } from './services/responses.js';
 
 const response = await createResponse(prompt, {
-  model: 'gpt-4o',
+  model: 'gpt-5-mini', // GPT-5 modeller använder Responses API
   maxTokens: 1000,
-  temperature: 0.7
+  enableWebSearch: true, // Aktivera web search för GPT-5 modeller
+  // temperature stöds INTE för Responses API - använd text.verbosity istället
 });
 
-// Responses API försöker först med OpenAI, fallback till Anthropic automatiskt
-// response.provider visar vilken provider som användes ('openai' eller 'anthropic')
+// Responses API använder GPT-5 modeller, fallback till Chat Completions API med GPT-4.1 om det misslyckas
+// response.provider visar vilken provider som användes ('openai')
 
 // LinkedIn API - Access token från miljövariabel
 // Business-sidan har redan tillgång till LinkedIn API
@@ -180,6 +193,15 @@ news/
     linkedinUrn: string
     createdAt: timestamp
     updatedAt: timestamp
+
+errorLogs/
+  {errorId}/
+    timestamp: timestamp
+    context: string
+    message: string
+    stack: string | null
+    metadata: object
+    severity: 'error' | 'warning'
 ```
 
 ### Index
@@ -196,77 +218,70 @@ npm run build
 
 ### 2. Deploy till Google Cloud Functions
 
-Deploya båda handlers:
+**Huvudhandler (managerHandler):**
+Detta är den enda handler som ska anropas från Cloud Scheduler. Den kör alla agenter parallellt och loggar fel till Firestore.
 
-**API-nyhetshandler:**
 ```bash
+gcloud functions deploy managerHandler \
+  --gen2 \
+  --runtime=nodejs22 \
+  --region=europe-north1 \
+  --source=/path/to/cloud \
+  --entry-point=managerHandler \
+  --trigger-http \
+  --allow-unauthenticated \
+  --timeout=802s \
+  --set-env-vars=GOOGLE_CLOUD_PROJECT=your-project-id \
+  --set-env-vars=PUBLIC_BASE_URL=https://ai-arne.se \
+  --set-env-vars=LINKEDIN_ACCESS_TOKEN=...,LINKEDIN_ORG_URN=urn:li:organization:... \
+  --set-env-vars=OPENAI_API_KEY=sk-proj-...
+```
+
+**Individuella handlers (valfritt, för bakåtkompatibilitet):**
+Dessa handlers kan deployas om du behöver anropa dem direkt, men rekommenderas att använda managerHandler istället.
+
+```bash
+# API-nyhetshandler (valfritt)
 gcloud functions deploy apiNewsHandler \
   --gen2 \
   --runtime=nodejs22 \
   --region=europe-north1 \
-  --source=/home/paj/Dev/ai-arne_cloud \
+  --source=/path/to/cloud \
   --entry-point=apiNewsHandler \
   --trigger-http \
   --allow-unauthenticated \
   --set-env-vars=GOOGLE_CLOUD_PROJECT=your-project-id \
   --set-env-vars=PUBLIC_BASE_URL=https://ai-arne.se \
   --set-env-vars=LINKEDIN_ACCESS_TOKEN=...,LINKEDIN_ORG_URN=urn:li:organization:... \
-  --set-env-vars=OPENAI_API_KEY=sk-... \
-  --set-env-vars=ANTHROPIC_API_KEY=sk-ant-...
-```
+  --set-env-vars=OPENAI_API_KEY=sk-proj-...
+  --timeout=802s
 
-**Allmänna nyhetshandler:**
-```bash
+# Allmänna nyhetshandler (valfritt)
 gcloud functions deploy generalNewsHandler \
   --gen2 \
   --runtime=nodejs22 \
   --region=europe-north1 \
-  --source=/home/paj/Dev/ai-arne_cloud \
+  --source=/path/to/cloud \
   --entry-point=generalNewsHandler \
   --trigger-http \
   --allow-unauthenticated \
   --set-env-vars=GOOGLE_CLOUD_PROJECT=your-project-id \
   --set-env-vars=PUBLIC_BASE_URL=https://ai-arne.se \
   --set-env-vars=LINKEDIN_ACCESS_TOKEN=...,LINKEDIN_ORG_URN=urn:li:organization:... \
-  --set-env-vars=RSS_FEEDS=https://feeds.feedburner.com/oreilly/radar,https://techcrunch.com/feed/ \
-  --set-env-vars=OPENAI_API_KEY=sk-... \
-  --set-env-vars=ANTHROPIC_API_KEY=sk-ant-...
-```
-
-**Bakåtkompatibilitet (valfritt):**
-```bash
-gcloud functions deploy managerHandler \
-  --gen2 \
-  --runtime=nodejs22 \
-  --region=europe-north1 \
-  --source=/home/paj/Dev/ai-arne_cloud \
-  --entry-point=managerHandler \
-  --trigger-http \
-  --allow-unauthenticated \
-  --set-env-vars=GOOGLE_CLOUD_PROJECT=your-project-id \
-  --set-env-vars=PUBLIC_BASE_URL=https://ai-arne.se \
-  --set-env-vars=LINKEDIN_ACCESS_TOKEN=...,LINKEDIN_ORG_URN=urn:li:organization:... \
-  --set-env-vars=OPENAI_API_KEY=sk-... \
-  --set-env-vars=ANTHROPIC_API_KEY=sk-ant-...
+  --set-env-vars=OPENAI_API_KEY=sk-proj-...
+  --timeout=802s
 ```
 
 ### 3. Sätt upp Cloud Scheduler
 
-**För API-nyheter:**
-```bash
-gcloud scheduler jobs create http ai-arne-api-news \
-  --schedule="0 9 * * MON" \
-  --time-zone="Europe/Stockholm" \
-  --uri="https://REGION-PROJECT.cloudfunctions.net/apiNewsHandler" \
-  --http-method=GET
-```
+**Huvudschedule (rekommenderas):**
+Anropa managerHandler som kör alla agenter parallellt:
 
-**För allmänna nyheter:**
 ```bash
-gcloud scheduler jobs create http ai-arne-general-news \
+gcloud scheduler jobs create http ai-arne-manager \
   --schedule="0 9 * * MON" \
   --time-zone="Europe/Stockholm" \
-  --uri="https://REGION-PROJECT.cloudfunctions.net/generalNewsHandler" \
+  --uri="https://REGION-PROJECT.cloudfunctions.net/managerHandler" \
   --http-method=GET
 ```
 

@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import Seo from '../components/Seo';
 import { EmptyState, ErrorState, Skeleton } from '../components/States';
 import { mapNews, queryCollection } from '../lib/firestore';
-import { sanitizeHtml } from '../lib/sanitize';
+import { sanitizeHtml, decodeHtmlEntities } from '../lib/sanitize';
 
 export default function NewsDetail() {
   const { slug } = useParams<{ slug: string }>();
@@ -35,9 +35,9 @@ export default function NewsDetail() {
 
   return (
     <article className="space-y-8">
-      <Seo title={`${item.title} – AI‑Arne`} description={item.excerpt || item.title} />
-      <h1>{item.title}</h1>
-      <p className="muted">Källa: {item.source || 'okänd'}</p>
+      <Seo title={`${decodeHtmlEntities(item.title)} – AI‑Arne`} description={decodeHtmlEntities(item.excerpt || item.title)} />
+      <h1>{decodeHtmlEntities(item.title)}</h1>
+      <p className="muted">Källa: {decodeHtmlEntities(item.source || 'okänd')}</p>
       {item.sourceUrl && (
         <p><a className="btn" href={item.sourceUrl} target="_blank" rel="noopener noreferrer">Källa</a></p>
       )}
