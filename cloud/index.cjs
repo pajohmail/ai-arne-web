@@ -3,4 +3,3 @@ const handlers = require('./dist/index.js');
 exports.managerHandler = handlers.managerHandler;
 exports.apiNewsHandler = handlers.apiNewsHandler;
 exports.generalNewsHandler = handlers.generalNewsHandler;
-exports.chatHandler = handlers.chatHandler;

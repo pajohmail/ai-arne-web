@@ -1,3 +1,12 @@
+/**
+ * Agent för att generera tutorials för API-releases
+ * 
+ * Denna modul genererar omfattande, pedagogiska tutorials för API-releases
+ * med AI. Tutorials innehåller steg-för-steg-guider, exempelkod, och best practices.
+ * 
+ * @module tutorialAgent
+ */
+
 import { sanitizeHtml } from '../utils/text.js';
 import type { ProviderRelease } from './providers.js';
 import { upsertTutorialForPost } from '../services/upsert.js';
@@ -5,7 +14,32 @@ import { createResponse } from '../services/responses.js';
 
 /**
  * Skapar eller uppdaterar en tutorial med AI-genererat innehåll via Responses API
- * Fallback till statisk HTML om API-nycklar saknas
+ * 
+ * Funktionen genererar en omfattande tutorial (minst 1500 ord) med:
+ * - Introduktion och bakgrund
+ * - Förutsättningar och förberedelser
+ * - Installation och setup
+ * - Grundläggande användning med exempel
+ * - Avancerade exempel och use cases
+ * - Felhantering och troubleshooting
+ * - Best practices och tips
+ * - Ytterligare resurser
+ * 
+ * Använder OpenAI Responses API med högre temperatur för mer kreativitet och humor.
+ * Fallback till statisk HTML om API-nycklar saknas eller misslyckas.
+ * 
+ * @param postId - Firestore document ID för den relaterade posten
+ * @param release - Release-information från provider
+ * @returns Promise som resolverar till resultat med ID och updated-flagga
+ * 
+ * @example
+ * const result = await createOrUpdateTutorial(postId, {
+ *   provider: 'openai',
+ *   name: 'GPT-5',
+ *   version: '1.0.0',
+ *   summary: 'Ny modell...',
+ *   url: 'https://github.com/...'
+ * });
  */
 export async function createOrUpdateTutorial(postId: string, release: ProviderRelease) {
   const title = `Kom igång med ${release.name}${release.version ? ' ' + release.version : ''}`;

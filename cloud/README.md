@@ -25,11 +25,6 @@ Webbplats (läser direkt från Firestore via REST API)
 - **Tutorial-agent**: Skapar AI-genererade tutorials för API-nyheter via Responses API
   - Använder OpenAI Responses API för att generera tutorial-innehåll
   - Fallback till statisk HTML om API-nycklar saknas
-- **Chat-handler**: Hanterar användarfrågor om AI-nyheter via interaktiv chat
-  - Använder OpenAI Responses API för att generera underhållande svar med ironi
-  - Fallback till Anthropic API om OpenAI saknas
-  - Sparar frågor i Firestore `user_questions` collection (inte svaren - de körs igen)
-  - Filtrerar så endast AI-relaterade frågor accepteras
 - **LinkedIn-integration**: Uppdaterar företagsprofil automatiskt
 
 ## Responses API och Minneshantering
@@ -38,13 +33,11 @@ Systemet använder OpenAI:s Responses API för tillståndsbevarande konversation
 
 - **State Management**: Responses API stödjer conversation_id för att hålla state mellan anrop
 - **Fallback-mekanism**: Automatisk fallback till Anthropic API om OpenAI API-nyckel saknas eller misslyckas
-- **Context Management**: `createResponseWithContext` helper-funktion för att hantera konversationshistorik
 - **Minneshantering**: Varje konversation får ett unikt conversation_id som kan sparas i Firestore för framtida referens
 
 Implementationen finns i `src/services/responses.ts` och används av:
 - `generalNewsAgent.ts` - För sammanfattning av RSS-nyheter
 - `tutorialAgent.ts` - För generering av tutorial-innehåll
-- `index.ts` (chatHandler) - För interaktiv chat om AI-nyheter
 
 ## Installation
 
@@ -236,21 +229,6 @@ gcloud functions deploy generalNewsHandler \
   --set-env-vars=PUBLIC_BASE_URL=https://ai-arne.se \
   --set-env-vars=LINKEDIN_ACCESS_TOKEN=...,LINKEDIN_ORG_URN=urn:li:organization:... \
   --set-env-vars=RSS_FEEDS=https://feeds.feedburner.com/oreilly/radar,https://techcrunch.com/feed/ \
-  --set-env-vars=OPENAI_API_KEY=sk-... \
-  --set-env-vars=ANTHROPIC_API_KEY=sk-ant-...
-```
-
-**Chat-handler (Nyhets Chat):**
-```bash
-gcloud functions deploy chatHandler \
-  --gen2 \
-  --runtime=nodejs22 \
-  --region=europe-north1 \
-  --source=/home/paj/Dev/ai-arne-web/cloud \
-  --entry-point=chatHandler \
-  --trigger-http \
-  --allow-unauthenticated \
-  --set-env-vars=GOOGLE_CLOUD_PROJECT=your-project-id \
   --set-env-vars=OPENAI_API_KEY=sk-... \
   --set-env-vars=ANTHROPIC_API_KEY=sk-ant-...
 ```

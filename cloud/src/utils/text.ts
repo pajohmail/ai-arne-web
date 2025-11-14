@@ -1,29 +1,47 @@
+/**
+ * Text utility-funktioner
+ * 
+ * Denna modul tillhandahåller helper-funktioner för text-manipulation:
+ * - HTML-sanitization (XSS-skydd)
+ * - Slug-generering (URL-vänliga strängar)
+ * 
+ * @module text
+ */
+
 import he from 'he';
 
+/**
+ * Sanitizerar HTML för att förhindra XSS-attacker
+ * 
+ * Funktionen HTML-encodar alla specialtecken i en sträng för säker
+ * visning i HTML. Används för att säkerställa att användarinput
+ * inte kan innehålla skadlig kod.
+ * 
+ * @param input - Text att sanitizera
+ * @returns HTML-encoded sträng
+ * 
+ * @example
+ * const safe = sanitizeHtml('<script>alert("xss")</script>');
+ * // Resultat: "&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;"
+ */
 export function sanitizeHtml(input: string) {
   return he.encode(input, { useNamedReferences: true });
 }
 
-/**
- * Sanitize textinnehåll för HTML - kodar endast text, inte HTML-taggar
- * Används när text ska placeras inuti HTML-taggar
- */
-export function sanitizeTextForHtml(input: string): string {
-  return he.encode(input, { useNamedReferences: true });
-}
 
 /**
- * Sanitize HTML-innehåll - behåller HTML-taggar men säkerställer att innehållet är säkert
- * Används när HTML redan är formaterad och ska sparas som HTML
+ * Konverterar en sträng till en URL-vänlig slug
+ * 
+ * Funktionen konverterar en sträng till lowercase, ersätter specialtecken
+ * med bindestreck, och tar bort inledande/avslutande bindestreck.
+ * 
+ * @param s - Sträng att konvertera
+ * @returns URL-vänlig slug
+ * 
+ * @example
+ * const slug = slugify('OpenAI GPT-5 Release!');
+ * // Resultat: "openai-gpt-5-release"
  */
-export function sanitizeHtmlContent(html: string): string {
-  // Om innehållet redan är HTML (innehåller taggar), returnera det som det är
-  // DOMPurify i frontend kommer att hantera säkerheten
-  // Vi kodar bara potentiellt farliga tecken som < och > som inte är del av taggar
-  // För enkelhetens skull, returnera HTML som det är - frontend hanterar säkerheten
-  return html;
-}
-
 export function slugify(s: string) {
   return s
     .toLowerCase()

@@ -1,28 +1,69 @@
+/**
+ * Agent för att hitta och bearbeta allmänna AI-nyheter med LLM
+ * 
+ * Denna modul innehåller funktioner för att:
+ * - Hitta de 10 viktigaste AI-nyheterna från senaste veckan med LLM och web search
+ * - Omarbeta nyhetssammanfattningar till underhållande nyhetsnotiser med ironisk touch
+ * - Bearbeta och spara nyheter i Firestore
+ * 
+ * @module generalNewsAgent
+ */
+
 import { sanitizeHtml } from '../utils/text.js';
 import { upsertGeneralNews } from '../services/upsert.js';
 import { createResponse } from '../services/responses.js';
 
+/**
+ * Interface för en bearbetad nyhet som är redo att sparas i Firestore
+ */
 export interface ProcessedNewsItem {
+  /** Nyhetens titel (HTML-encoded för säkerhet) */
   title: string;
+  /** Fullständigt HTML-innehåll med paragrafstruktur */
   content: string;
+  /** Kort sammanfattning för förhandsvisning (max 280 tecken) */
   excerpt: string;
+  /** URL till originalkällan */
   sourceUrl: string;
+  /** Namn på källan (t.ex. "TechCrunch", "LLM-sökning") */
   source: string;
 }
 
+/**
+ * Interface för en nyhet som returneras från LLM-sökningen
+ */
 export interface LLMNewsItem {
+  /** Nyhetens titel på svenska */
   title: string;
+  /** Sammanfattning på svenska (100-200 ord) */
   summary: string;
+  /** URL till originalkällan */
   sourceUrl: string;
+  /** Namn på källan */
   sourceName: string;
 }
 
+/**
+ * Interface för LLM-responsen när nyheter hämtas
+ */
 export interface LLMNewsResponse {
+  /** Array med nyheter */
   news: LLMNewsItem[];
 }
 
 /**
- * Använder LLM för att hitta veckans 10 viktigaste AI-relaterade nyheter
+ * Använder LLM med web search för att hitta veckans 10 viktigaste AI-relaterade nyheter
+ * 
+ * Funktionen använder OpenAI Responses API med web search aktiverat för att söka efter
+ * aktuella AI-nyheter från senaste veckan. LLM:en filtrerar och rankar nyheterna baserat
+ * på relevans för AI-utveckling och programmering.
+ * 
+ * @returns Promise som resolverar till en array med max 10 nyheter
+ * @throws Error om LLM-anropet misslyckas eller JSON-parsning misslyckas
+ * 
+ * @example
+ * const news = await findTopAINewsWithLLM();
+ * console.log(`Found ${news.length} news items`);
  */
 export async function findTopAINewsWithLLM(): Promise<LLMNewsItem[]> {
   const now = new Date();
@@ -168,6 +209,22 @@ KRITISKA REGLER FÖR JSON:
 
 /**
  * Omarbetar en nyhetssammanfattning med AI för att göra den underhållande med ironisk touch
+ * 
+ * Funktionen tar en nyhet från LLM-sökningen och omarbetar den till en längre, mer
+ * underhållande nyhetsnotis (300-500 ord) med ironisk touch och svenska humor.
+ * Använder web search för att komplettera nyheten med aktuell information från webben.
+ * 
+ * @param newsItem - Nyheten som ska omarbetas
+ * @returns Promise som resolverar till en bearbetad nyhet redo för Firestore
+ * @throws Error om AI-omarbetning misslyckas (använder fallback till original)
+ * 
+ * @example
+ * const processed = await rewriteNewsWithAI({
+ *   title: "OpenAI släpper ny modell",
+ *   summary: "Kort sammanfattning...",
+ *   sourceUrl: "https://example.com",
+ *   sourceName: "TechCrunch"
+ * });
  */
 export async function rewriteNewsWithAI(newsItem: LLMNewsItem): Promise<ProcessedNewsItem> {
   const prompt = `Du är en AI-nyhetsskribent som omarbetar nyhetssammanfattningar till korta, underhållande nyhetsnotiser med en tydlig touch av ironi och svenska humor. Använd ironi och svenska humor flitigt genom hela texten.
@@ -300,8 +357,20 @@ Skriv nyhetsnotisen direkt utan extra formatering. Använd paragraf-struktur med
 }
 
 /**
- * Bearbetar och sparar allmänna nyheter från LLM-sökning
- * Returnerar en lista med de faktiska sparade nyheterna (inklusive ID, slug, etc.)
+ * Bearbetar och sparar allmänna nyheter från LLM-sökning i Firestore
+ * 
+ * Funktionen loopar igenom en lista med nyheter, omarbetar varje nyhet med AI,
+ * och sparar dem i Firestore. Processar en nyhet i taget för att säkerställa
+ * att varje nyhet sparas korrekt även om någon misslyckas.
+ * 
+ * @param newsItems - Array med nyheter att bearbeta och spara
+ * @returns Promise som resolverar till en array med de faktiskt sparade nyheterna
+ *          (inklusive ID, slug, etc. från Firestore)
+ * 
+ * @example
+ * const newsItems = await findTopAINewsWithLLM();
+ * const saved = await processAndUpsertNews(newsItems);
+ * console.log(`Saved ${saved.length} news items`);
  */
 export async function processAndUpsertNews(newsItems: LLMNewsItem[]): Promise<Array<{
   id: string;

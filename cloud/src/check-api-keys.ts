@@ -1,11 +1,28 @@
+/**
+ * Diagnostikverktyg för att kontrollera API-nycklar och AI-koppling
+ * 
+ * Detta script kontrollerar att API-nycklar är korrekt konfigurerade
+ * och testar att AI-API:erna fungerar. Användbart för troubleshooting
+ * och verifiering av miljövariabler.
+ * 
+ * @module check-api-keys
+ */
+
 import { config } from 'dotenv';
 import { createResponse } from './services/responses.js';
 
-// Ladda miljövariabler
+// Ladda miljövariabler från .env-fil
 config();
 
 /**
- * Diagnostikverktyg för att kontrollera API-nycklar och AI-koppling
+ * Huvudfunktion som kör diagnostiken
+ * 
+ * Funktionen:
+ * 1. Kontrollerar att API-nycklar är konfigurerade
+ * 2. Testar att API-anrop fungerar
+ * 3. Visar vilken provider som användes
+ * 
+ * @private
  */
 async function checkAPIKeys() {
   console.log('🔍 Kontrollerar API-nycklar och AI-koppling...\n');

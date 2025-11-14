@@ -1,20 +1,51 @@
+/**
+ * Manager för generella AI-nyheter
+ * 
+ * Denna modul koordinerar hela flödet för generella nyheter:
+ * - Hittar nyheter via LLM
+ * - Bearbetar och sparar dem i Firestore
+ * - Genererar och publicerar LinkedIn-inlägg
+ * 
+ * @module generalNewsManager
+ */
+
 import { findTopAINewsWithLLM, processAndUpsertNews } from './generalNewsAgent.js';
 import { postToLinkedIn } from '../services/linkedin.js';
 import { withFirestore } from '../services/firestore.js';
 import { COLLECTIONS } from '../services/schema.js';
 import { createResponse } from '../services/responses.js';
 
+/**
+ * Interface för en nyhet som har sparats i Firestore
+ */
 interface NewsItem {
+  /** Firestore document ID */
   id: string;
+  /** URL-vänlig slug för nyheten */
   slug: string;
+  /** Nyhetens titel */
   title: string;
+  /** URL till originalkällan */
   sourceUrl: string;
+  /** Fullständigt HTML-innehåll */
   content: string;
+  /** Kort sammanfattning */
   excerpt: string;
 }
 
 /**
  * Genererar en säljande och underhållande LinkedIn-sammanfattning av nyheter med AI
+ * 
+ * Funktionen tar en lista med sparade nyheter och genererar en kort, engagerande
+ * sammanfattning som passar för LinkedIn. Använder AI för att skapa en säljande
+ * och underhållande text med ironisk touch.
+ * 
+ * @param newsItems - Array med sparade nyheter att sammanfatta
+ * @returns Promise som resolverar till LinkedIn-texten
+ * 
+ * @example
+ * const summary = await generateLinkedInSummary(savedNews);
+ * await postToLinkedIn({ text: summary, ... });
  */
 async function generateLinkedInSummary(newsItems: NewsItem[]): Promise<string> {
   // Bygg en sammanfattning av alla nyheter
@@ -68,7 +99,19 @@ Skriv sammanfattningen direkt utan extra formatering.`;
 
 /**
  * Huvudfunktion som kör hela flödet för allmänna AI-nyheter
- * @param force - För framtida användning (t.ex. för att hoppa över "har redan kört idag"-check)
+ * 
+ * Funktionen koordinerar hela processen:
+ * 1. Hittar veckans 10 viktigaste AI-nyheter via LLM med web search
+ * 2. Bearbetar varje nyhet (omarbetar med AI, sparar i Firestore)
+ * 3. Genererar och publicerar LinkedIn-inlägg med sammanfattning
+ * 
+ * @param options - Konfigurationsalternativ
+ * @param options.force - Om true, hoppar över eventuella "har redan kört idag"-kontroller
+ * @returns Promise som resolverar till resultat med antal bearbetade nyheter
+ * 
+ * @example
+ * const result = await runGeneralNewsManager({ force: true });
+ * console.log(`Processed ${result.processed} news items`);
  */
 export async function runGeneralNewsManager({ force = false }: { force?: boolean } = {}) {
   // Bearbeta max 10 nyheter per körning (top 10)
