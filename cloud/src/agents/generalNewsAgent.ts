@@ -25,14 +25,27 @@ export interface LLMNewsResponse {
  * Använder LLM för att hitta veckans 10 viktigaste AI-relaterade nyheter
  */
 export async function findTopAINewsWithLLM(): Promise<LLMNewsItem[]> {
-  const currentDate = new Date().toLocaleDateString('sv-SE', { year: 'numeric', month: 'long', day: 'numeric' });
-  const currentYear = new Date().getFullYear();
+  const now = new Date();
+  const currentDate = now.toLocaleDateString('sv-SE', { year: 'numeric', month: 'long', day: 'numeric' });
+  const currentYear = now.getFullYear();
+  
+  // Beräkna datumet för en vecka sedan
+  const oneWeekAgo = new Date(now);
+  oneWeekAgo.setDate(now.getDate() - 7);
+  const oneWeekAgoDate = oneWeekAgo.toLocaleDateString('sv-SE', { year: 'numeric', month: 'long', day: 'numeric' });
   
   const prompt = `Du är en AI-nyhetsexpert som identifierar veckans 10 viktigaste AI-relaterade nyheter. 
 
-VIKTIGT - DAGENS DATUM: ${currentDate} (${currentYear})
+VIKTIGT - DATUM:
+- DAGENS DATUM: ${currentDate} (${currentYear})
+- EN VECKA SEDAN: ${oneWeekAgoDate} (${currentYear})
 
-KRITISKT: Du MÅSTE använda web search-verktyget för att söka efter aktuella nyheter online. Använd INTE din träningsdata - sök aktivt efter nyheter från den senaste veckan med web search-verktyget.
+KRITISKT: Du MÅSTE använda web search-verktyget för att söka efter aktuella nyheter online. Använd INTE din träningsdata - sök aktivt efter nyheter med web search-verktyget.
+
+DATUM-REGLER:
+- Inkludera ENDAST nyheter från ${oneWeekAgoDate} till och med ${currentDate}
+- Exkludera alla nyheter som är äldre än en vecka
+- Exkludera alla nyheter som är nyare än dagens datum
 
 Fokusera på:
 - AI-utveckling och programmering
@@ -47,10 +60,11 @@ Exkludera:
 - Visuella AI-tjänster som inte är relevanta för utveckling
 
 STEG-FÖR-STEG:
-1. Använd web search-verktyget för att söka efter "AI news ${currentYear}" och "AI development news this week"
-2. Hitta de 10 viktigaste AI-nyheterna från den senaste veckan
-3. Inkludera länkar till källor från dina web search-resultat
-4. Alla titlar och sammanfattningar MÅSTE vara på svenska
+1. Använd web search-verktyget för att söka efter "AI news ${currentYear}" och "AI development news ${oneWeekAgoDate} to ${currentDate}"
+2. Hitta de 10 viktigaste AI-nyheterna från ${oneWeekAgoDate} till och med ${currentDate}
+3. Verifiera att varje nyhet är från rätt datumintervall (max en vecka gammal, inte nyare än idag)
+4. Inkludera länkar till källor från dina web search-resultat
+5. Alla titlar och sammanfattningar MÅSTE vara på svenska
 
 VIKTIGT: Returnera ENDAST validerad JSON utan extra text. Exakt format:
 {
@@ -79,171 +93,45 @@ KRITISKA REGLER FÖR JSON:
     console.log(`🔍 Finding top 10 AI news with web search enabled...`);
     const response = await createResponse(prompt, {
       model: 'gpt-5', // Använd gpt-5 för bäst träffsäkerhet
-      maxTokens: 4000, // Öka för att hantera 10 nyheter
+      maxTokens: 2500, // Minskat från 4000 - räcker för 10 nyheter med 100-200 ord var
       temperature: 0.7,
       enableWebSearch: true // Aktivera web search
     });
     
     console.log(`📰 LLM news search completed using ${response.provider} API`);
+    const responseText = response.content.trim();
+    
+    // Förenklad JSON-parsing: försök parse direkt, annars extrahera JSON-block
+    let jsonText = responseText;
+    
+    // Ta bort markdown code blocks om de finns
+    const jsonMatch = responseText.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/);
+    if (jsonMatch) {
+      jsonText = jsonMatch[1].trim();
+    } else {
+      // Försök hitta JSON-objekt direkt - hitta första { och sista }
+      const firstBrace = responseText.indexOf('{');
+      const lastBrace = responseText.lastIndexOf('}');
+      if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+        jsonText = responseText.substring(firstBrace, lastBrace + 1).trim();
+      }
+    }
 
-        const responseText = response.content.trim();
-        
-        console.log('LLM response (first 1000 chars):', responseText.substring(0, 1000));
-        
-        // Försök extrahera JSON från svaret (kan innehålla markdown code blocks)
-        let jsonText = responseText;
-        
-        // Ta bort markdown code blocks om de finns
-        const jsonMatch = responseText.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/);
-        if (jsonMatch) {
-          jsonText = jsonMatch[1];
-        } else {
-          // Försök hitta JSON-objekt direkt - hitta första { och sista }
-          const firstBrace = responseText.indexOf('{');
-          const lastBrace = responseText.lastIndexOf('}');
-          if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-            jsonText = responseText.substring(firstBrace, lastBrace + 1);
-          }
-        }
+    // Enkel fix för trailing commas (bara en gång)
+    jsonText = jsonText.replace(/,(\s*[}\]])/g, '$1');
 
-        // Försök fixa vanliga JSON-fel
-        // 1. Ta bort trailing kommatecken i arrays och objects (flera gånger för att fånga alla)
-        let previousLength = 0;
-        let iterations = 0;
-        while (jsonText.length !== previousLength && iterations < 10) {
-          previousLength = jsonText.length;
-          jsonText = jsonText.replace(/,(\s*[}\]])/g, '$1');
-          iterations++;
-        }
-        
-        // 2. Fixa oavslutade strängar (ta bort oavslutade quotes i slutet)
-        jsonText = jsonText.replace(/("|')([^"']*)$/g, '$1');
-        
-        // 3. Ta bort whitespace i början och slutet
-        jsonText = jsonText.trim();
-        
-        // 4. Försök hitta och fixa oavslutade arrays/objects
-        const openBraces = (jsonText.match(/\{/g) || []).length;
-        const closeBraces = (jsonText.match(/\}/g) || []).length;
-        const openBrackets = (jsonText.match(/\[/g) || []).length;
-        const closeBrackets = (jsonText.match(/\]/g) || []).length;
-        
-        // Lägg till saknade stängande brackets/braces om det behövs
-        if (openBraces > closeBraces) {
-          jsonText += '}'.repeat(openBraces - closeBraces);
-        }
-        if (openBrackets > closeBrackets) {
-          jsonText += ']'.repeat(openBrackets - closeBrackets);
-        }
-        
-        console.log('Extracted JSON (first 1000 chars):', jsonText.substring(0, 1000));
-        console.log('Extracted JSON (last 500 chars):', jsonText.substring(Math.max(0, jsonText.length - 500)));
-
-        let parsed: LLMNewsResponse;
-        try {
-          parsed = JSON.parse(jsonText);
-        } catch (parseError: any) {
-          console.error('JSON parse error:', parseError);
-          const positionMatch = parseError.message.match(/position (\d+)/);
-          if (positionMatch) {
-            const position = parseInt(positionMatch[1]);
-            const start = Math.max(0, position - 300);
-            const end = Math.min(jsonText.length, position + 300);
-            console.error('JSON text around error position:', jsonText.substring(start, end));
-            console.error('Character at error position:', jsonText[position]);
-            console.error('Full JSON length:', jsonText.length);
-          }
-          
-          // Försök en sista gång med mer aggressiv fixning
-          try {
-            // Ta bort allt efter sista }
-            const lastBrace = jsonText.lastIndexOf('}');
-            if (lastBrace !== -1) {
-              let cleanedJson = jsonText.substring(0, lastBrace + 1);
-              
-              // Fixa trailing commas flera gånger
-              let fixed = false;
-              for (let i = 0; i < 20; i++) {
-                const before = cleanedJson;
-                cleanedJson = cleanedJson.replace(/,(\s*[}\]])/g, '$1');
-                if (before === cleanedJson) {
-                  fixed = true;
-                  break;
-                }
-              }
-              
-              // Försök parse igen
-              parsed = JSON.parse(cleanedJson);
-              console.log('Successfully parsed after aggressive cleaning');
-            } else {
-              throw parseError;
-            }
-          } catch (retryError: any) {
-            // Sista försöket: försök extrahera bara news-arrayen
-            try {
-              const newsArrayMatch = jsonText.match(/"news"\s*:\s*\[([\s\S]*)\]/);
-              if (newsArrayMatch) {
-                let newsArrayText = '[' + newsArrayMatch[1] + ']';
-                
-                // Fixa trailing commas i arrayen flera gånger
-                for (let i = 0; i < 20; i++) {
-                  const before = newsArrayText;
-                  newsArrayText = newsArrayText.replace(/,(\s*[}\]])/g, '$1');
-                  if (before === newsArrayText) break;
-                }
-                
-                // Försök hitta och fixa oavslutade objects i arrayen
-                const openBracesInArray = (newsArrayText.match(/\{/g) || []).length;
-                const closeBracesInArray = (newsArrayText.match(/\}/g) || []).length;
-                if (openBracesInArray > closeBracesInArray) {
-                  newsArrayText += '}'.repeat(openBracesInArray - closeBracesInArray);
-                }
-                
-                const newsArray = JSON.parse(newsArrayText);
-                parsed = { news: newsArray };
-                console.log('Successfully parsed by extracting news array directly');
-              } else {
-                throw new Error(`Failed to parse JSON: ${parseError.message}. Retry also failed: ${retryError.message}`);
-              }
-            } catch (finalError: any) {
-              // Sista försöket: försök extrahera individuella nyheter från arrayen
-              try {
-                console.log('Attempting to extract individual news items from malformed JSON...');
-                // Försök hitta alla news-objekt individuellt
-                const newsItemMatches = jsonText.match(/\{[^}]*"title"[^}]*"summary"[^}]*\}/g);
-                if (newsItemMatches && newsItemMatches.length > 0) {
-                  const extractedNews: any[] = [];
-                  for (const match of newsItemMatches) {
-                    try {
-                      const cleaned = match.replace(/,(\s*[}\]])/g, '$1');
-                      const item = JSON.parse(cleaned);
-                      if (item.title && item.summary) {
-                        extractedNews.push({
-                          title: item.title,
-                          summary: item.summary,
-                          sourceUrl: item.sourceUrl || '',
-                          sourceName: item.sourceName || ''
-                        });
-                      }
-                    } catch (e) {
-                      // Ignorera individuella parsing-fel
-                    }
-                  }
-                  if (extractedNews.length > 0) {
-                    parsed = { news: extractedNews };
-                    console.log(`Successfully extracted ${extractedNews.length} news items individually`);
-                  } else {
-                    throw finalError;
-                  }
-                } else {
-                  throw finalError;
-                }
-              } catch (extractError: any) {
-                throw new Error(`Failed to parse JSON: ${parseError.message}. Retry also failed: ${retryError.message}. Final error: ${finalError.message}. Extract error: ${extractError.message}`);
-              }
-            }
-          }
-        }
+    let parsed: LLMNewsResponse;
+    try {
+      // Försök parse direkt
+      parsed = JSON.parse(jsonText);
+    } catch (parseError: any) {
+      console.error('JSON parse error:', parseError.message);
+      console.error('JSON text (first 500 chars):', jsonText.substring(0, 500));
+      console.error('JSON text (last 500 chars):', jsonText.substring(Math.max(0, jsonText.length - 500)));
+      
+      // Om parsing misslyckas, kasta fel - låt modellen få chansen att fixa det
+      throw new Error(`Failed to parse JSON from LLM response: ${parseError.message}. LLM may need to retry with correct JSON format.`);
+    }
     
     if (!parsed || !parsed.news || !Array.isArray(parsed.news)) {
       console.error('Invalid JSON structure:', parsed);
@@ -254,13 +142,17 @@ KRITISKA REGLER FÖR JSON:
     
     // Validera att alla nyheter har rätt struktur
     const validNews = parsed.news.filter((item: any) => {
-      const hasTitle = item.title && typeof item.title === 'string';
-      const hasSummary = item.summary && typeof item.summary === 'string';
-      console.log(`Validating news item: ${item.title || 'NO TITLE'} - hasTitle: ${hasTitle}, hasSummary: ${hasSummary}`);
+      const hasTitle = item.title && typeof item.title === 'string' && item.title.trim().length > 0;
+      const hasSummary = item.summary && typeof item.summary === 'string' && item.summary.trim().length > 0;
       return hasTitle && hasSummary;
     });
     
     console.log(`Validated ${validNews.length} news items out of ${parsed.news.length}`);
+
+    // Varning om vi får färre än 10 nyheter (som prompten begär)
+    if (validNews.length < 10) {
+      console.warn(`⚠️  WARNING: Only received ${validNews.length} valid news items, but prompt requested exactly 10.`);
+    }
 
     // Begränsa till 10 nyheter
     return validNews.slice(0, 10);
@@ -278,30 +170,34 @@ KRITISKA REGLER FÖR JSON:
  * Omarbetar en nyhetssammanfattning med AI för att göra den underhållande med ironisk touch
  */
 export async function rewriteNewsWithAI(newsItem: LLMNewsItem): Promise<ProcessedNewsItem> {
-  const prompt = `Du är en AI-nyhetsskribent som omarbetar nyhetssammanfattningar till underhållande text med en tydlig touch av ironi och svenska humor. Använd ironi och svenska humor flitigt genom hela texten.
+  const prompt = `Du är en AI-nyhetsskribent som omarbetar nyhetssammanfattningar till korta, underhållande nyhetsnotiser med en tydlig touch av ironi och svenska humor. Använd ironi och svenska humor flitigt genom hela texten.
 
 Originalnyhet:
 Titel: ${newsItem.title}
 Sammanfattning: ${newsItem.summary}
 Källa: ${newsItem.sourceName}
 
-VIKTIGT: Skriv en omarbetad artikel på 500-800 ord (MINST 500 ord, gärna 600-800 ord) som:
+VIKTIGT: Använd webbsökning för att komplettera nyheten med aktuell information från webben. Sök efter relaterad information, bakgrund och kontext som kan förbättra nyhetsnotisen.
+
+Skriv en kort nyhetsnotis på 300-500 ord (gärna runt 400 ord) som:
 - Behåller all viktig information från originalnyheten
+- Kompletteras med aktuell information från webbsökning
 - Är underhållande och engagerande att läsa
 - Har en tydlig ironisk touch och svenska humor genom HELA texten
 - Är informativ men rolig
 - Använder ironi och humor flitigt men respekterar faktan
-- Inkluderar kontext, bakgrundsinformation och relevanta detaljer
+- Inkluderar relevant kontext och bakgrundsinformation från webbsökningen
 - Är skriven på svenska med svenska humor och ironi
-- Var inte rädd för att vara långrandig - läsaren vill ha djupgående information
+- Matchar tonen på resten av sidan - underhållande och ironisk
 
-Skriv artikeln direkt utan extra formatering. Använd paragraf-struktur med tydliga avsnitt.`;
+Skriv nyhetsnotisen direkt utan extra formatering. Använd paragraf-struktur med tydliga avsnitt.`;
 
   try {
     const response = await createResponse(prompt, {
       model: 'gpt-5-mini',
-      maxTokens: 2000, // Öka från 500 till 2000 för längre texter (500-800 ord)
-      temperature: 0.8 // Högre temperatur för mer kreativitet och humor
+      maxTokens: 1500, // För 300-500 ord texter
+      temperature: 0.8, // Högre temperatur för mer kreativitet och humor
+      enableWebSearch: true // Aktivera web search för att komplettera nyheten
     });
     
     console.log(`✍️ News rewrite completed using ${response.provider} API`);
@@ -322,10 +218,32 @@ Skriv artikeln direkt utan extra formatering. Använd paragraf-struktur med tydl
       return `<p>${sanitizeHtml(p)}</p>`;
     });
     
+    // Validera och säkert hantera URL för href-attribut
+    let sourceLink = '';
+    if (newsItem.sourceUrl) {
+      // Validera att URL är http/https
+      const url = newsItem.sourceUrl.trim();
+      if (url.startsWith('http://') || url.startsWith('https://')) {
+        // HTML-encoda bara farliga tecken i URL, inte : eller /
+        const safeUrl = url
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#x27;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+        const safeName = sanitizeHtml(newsItem.sourceName || url);
+        sourceLink = `<p>Källa: <a href="${safeUrl}" rel="noopener" target="_blank">${safeName}</a></p>`;
+      } else {
+        // Ogiltig URL, visa bara text
+        sourceLink = `<p>Källa: ${sanitizeHtml(newsItem.sourceName || 'Okänd')}</p>`;
+      }
+    } else {
+      sourceLink = `<p>Källa: ${sanitizeHtml(newsItem.sourceName || 'Okänd')}</p>`;
+    }
+
     const htmlContent = [
       `<p><strong>${sanitizeHtml(newsItem.title)}</strong></p>`,
       ...htmlParagraphs,
-      newsItem.sourceUrl ? `<p>Källa: <a href="${sanitizeHtml(newsItem.sourceUrl)}" rel="noopener" target="_blank">${sanitizeHtml(newsItem.sourceName || newsItem.sourceUrl)}</a></p>` : `<p>Källa: ${sanitizeHtml(newsItem.sourceName || 'Okänd')}</p>`
+      sourceLink
     ].join('\n');
 
     return {
@@ -346,10 +264,29 @@ Skriv artikeln direkt utan extra formatering. Använd paragraf-struktur med tydl
       .filter(p => p.length > 0)
       .map(p => `<p>${sanitizeHtml(p)}</p>`);
     
+    // Validera och säkert hantera URL för href-attribut (fallback)
+    let fallbackSourceLink = '';
+    if (newsItem.sourceUrl) {
+      const url = newsItem.sourceUrl.trim();
+      if (url.startsWith('http://') || url.startsWith('https://')) {
+        const safeUrl = url
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#x27;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+        const safeName = sanitizeHtml(newsItem.sourceName || url);
+        fallbackSourceLink = `<p>Källa: <a href="${safeUrl}" rel="noopener" target="_blank">${safeName}</a></p>`;
+      } else {
+        fallbackSourceLink = `<p>Källa: ${sanitizeHtml(newsItem.sourceName || 'Okänd')}</p>`;
+      }
+    } else {
+      fallbackSourceLink = `<p>Källa: ${sanitizeHtml(newsItem.sourceName || 'Okänd')}</p>`;
+    }
+
     const fallbackHtml = [
       `<p><strong>${sanitizeHtml(newsItem.title)}</strong></p>`,
       ...fallbackParagraphs,
-      newsItem.sourceUrl ? `<p>Källa: <a href="${sanitizeHtml(newsItem.sourceUrl)}" rel="noopener" target="_blank">${sanitizeHtml(newsItem.sourceName || newsItem.sourceUrl)}</a></p>` : `<p>Källa: ${sanitizeHtml(newsItem.sourceName || 'Okänd')}</p>`
+      fallbackSourceLink
     ].join('\n');
     
     return {
@@ -364,9 +301,30 @@ Skriv artikeln direkt utan extra formatering. Använd paragraf-struktur med tydl
 
 /**
  * Bearbetar och sparar allmänna nyheter från LLM-sökning
+ * Returnerar en lista med de faktiska sparade nyheterna (inklusive ID, slug, etc.)
  */
-export async function processAndUpsertNews(newsItems: LLMNewsItem[]): Promise<number> {
-  let processed = 0;
+export async function processAndUpsertNews(newsItems: LLMNewsItem[]): Promise<Array<{
+  id: string;
+  slug: string;
+  title: string;
+  sourceUrl: string;
+  content: string;
+  excerpt: string;
+}>> {
+  // Null-check och validering
+  if (!newsItems || !Array.isArray(newsItems) || newsItems.length === 0) {
+    console.warn('No news items to process - newsItems is null, not an array, or empty');
+    return [];
+  }
+
+  const processedNews: Array<{
+    id: string;
+    slug: string;
+    title: string;
+    sourceUrl: string;
+    content: string;
+    excerpt: string;
+  }> = [];
 
   console.log(`Processing ${newsItems.length} news items...`);
 
@@ -380,7 +338,16 @@ export async function processAndUpsertNews(newsItems: LLMNewsItem[]): Promise<nu
       // Spara i databas
       const result = await upsertGeneralNews(processedItem);
       console.log(`Upserted news item: ${result.id}, slug: ${result.slug}, updated: ${result.updated}`);
-      processed++;
+      
+      // Lägg till det faktiska objektet med all data
+      processedNews.push({
+        id: result.id,
+        slug: result.slug,
+        title: processedItem.title,
+        sourceUrl: processedItem.sourceUrl,
+        content: processedItem.content,
+        excerpt: processedItem.excerpt
+      });
     } catch (error: any) {
       console.error(`Failed to process news item "${newsItem.title}":`, error);
       console.error(`Error details:`, {
@@ -391,6 +358,6 @@ export async function processAndUpsertNews(newsItems: LLMNewsItem[]): Promise<nu
     }
   }
 
-  console.log(`Successfully processed ${processed} out of ${newsItems.length} news items`);
-  return processed;
+  console.log(`Successfully processed ${processedNews.length} out of ${newsItems.length} news items`);
+  return processedNews;
 }

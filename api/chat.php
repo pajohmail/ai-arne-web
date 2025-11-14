@@ -1,4 +1,13 @@
 <?php
+// Öka execution time limit för att hantera långa AI-anrop (max 3 minuter)
+set_time_limit(180);
+ini_set('max_execution_time', 180);
+
+// Aktivera error reporting för debugging (ta bort i produktion om det inte behövs)
+error_reporting(E_ALL);
+ini_set('display_errors', 0); // Visa inte fel i output, bara logga
+ini_set('log_errors', 1);
+
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/_helpers.php';
 
@@ -20,55 +29,299 @@ if (!$data || !isset($data['question']) || empty(trim($data['question']))) {
 $question = trim($data['question']);
 $sessionId = $data['sessionId'] ?? null;
 
-// Anropa Cloud Function chatHandler
-// Cloud Function URL bör vara konfigurerad i config.php som CHAT_FUNCTION_URL
-$chatFunctionUrl = defined('CHAT_FUNCTION_URL') ? CHAT_FUNCTION_URL : null;
-
-if (!$chatFunctionUrl) {
-  // Fallback: Försök använda standard Cloud Function URL-format
-  // Detta är en placeholder - användaren behöver konfigurera rätt URL
-  $chatFunctionUrl = 'https://europe-north1-' . FIRESTORE_PROJECT_ID . '.cloudfunctions.net/chatHandler';
+// Enkel validering - blockera uppenbart irrelevanta frågor
+$obviousIrrelevantKeywords = [
+  'recept', 'mat', 'matlagning', 'kök', 'baka', 'tårta', 'kaka',
+  'middag', 'lunch', 'frukost', 'ingrediens', 'kräm', 'sås',
+  'sport', 'fotboll', 'hockey', 'tennis', 'golf', 'träning',
+  'hälsa', 'sjukdom', 'medicin', 'läkare', 'sjukvård'
+];
+$qLower = strtolower($question);
+$isObviouslyIrrelevant = false;
+foreach ($obviousIrrelevantKeywords as $keyword) {
+  if (strpos($qLower, $keyword) !== false) {
+    $isObviouslyIrrelevant = true;
+    break;
+  }
 }
 
-$payload = json_encode([
-  'question' => $question,
-  'sessionId' => $sessionId
-]);
+if ($isObviouslyIrrelevant) {
+  sendError('Frågan verkar inte vara relaterad till AI eller teknologi. Försök igen med en relevant fråga.', 400);
+}
 
-$ch = curl_init($chatFunctionUrl);
+// Bygg prompt
+$currentDate = date('j F Y', strtotime('now'));
+$currentYear = date('Y');
+$currentMonth = date('m');
+
+$prompt = "Du är en AI-nyhetsexpert som svarar på frågor om AI-nyheter och utveckling på ett underhållande sätt med en tydlig touch av ironi och svenska humor. Använd ironi och svenska humor flitigt genom hela svaret.
+
+VIKTIGT - DAGENS DATUM: {$currentDate} ({$currentYear}-{$currentMonth})
+
+Frågan: {$question}
+
+KRITISKA INSTRUKTIONER - LÄS NOGA:
+1. Du HAR tillgång till websökningar - DU MÅSTE använda dem för att hitta de SENASTE nyheterna från {$currentYear}
+2. Gör websökningar för att hitta aktuell information om ämnet - använd ALDRIG bara din träningsdata
+3. Prioritera information från de senaste 3 månaderna ({$currentYear})
+4. Inkludera länkar och källor från dina websökningar
+5. Om informationen är äldre än 6 månader, markera det tydligt
+6. Din träningsdata slutar typ april 2024 - använd ALLTID websökningar för aktuell information
+
+VIKTIGT: Skriv MINST 500 ord. Var inte kortfattad. Undvik korta svar. Var detaljerad och utförlig.
+
+STEG-FÖR-STEG PROCESS:
+1. Gör först en websökning om ämnet för att hitta de senaste nyheterna från {$currentYear}
+2. Hitta minst 3-5 aktuella källor från de senaste 3 månaderna
+3. Basera ditt svar PRIMÄRT på dessa websökningar - INTE på din träningsdata
+4. Inkludera länkar till källorna du hittar
+5. Om informationen är äldre än 6 månader, markera det tydligt
+
+Svara på svenska med:
+- Ett engagerande och underhållande svar med en tydlig ironisk touch genom hela texten
+- En detaljerad och informativ förklaring baserat på AKTUELL information från websökningar (MINST 500 ord)
+- Specifika länkar och källor från dina websökningar
+- Datum för när informationen är från (prioritera senaste 3 månaderna från {$currentYear})
+- Om informationen är äldre, markera det tydligt
+- Relevant information om AI-utveckling och nyheter, inklusive kontext och historik när det är lämpligt
+
+Kom ihåg: Använd websökningar för att hitta aktuell information från {$currentYear}. Prioritera information från de senaste 3 månaderna och inkludera länkar till källorna. Använd ALDRIG bara din träningsdata.
+
+Skriv en längre, mer detaljerad artikel (MINST 500 ord, gärna 600-800 ord) som är både informativ och underhållande. Var inte rädd för att vara långrandig - läsaren vill ha djupgående information. Inkludera exempel, jämförelser och relevanta sammanhang. Använd ironi och svenska humor flitigt för att göra läsningen mer engagerande.";
+
+// Funktion för att spara fråga i Firestore
+function saveUserQuestionToFirestore($question, $sessionId = null) {
+  if (!defined('FIRESTORE_PROJECT_ID') || !defined('FIRESTORE_API_KEY')) {
+    return false; // Tyst fail om config saknas
+  }
+  
+  $url = "https://firestore.googleapis.com/v1/projects/" . FIRESTORE_PROJECT_ID .
+         "/databases/(default)/documents/user_questions?key=" . FIRESTORE_API_KEY;
+  
+  $document = [
+    'fields' => [
+      'question' => ['stringValue' => $question],
+      'createdAt' => ['timestampValue' => date('c')]
+    ]
+  ];
+  
+  if ($sessionId) {
+    $document['fields']['sessionId'] = ['stringValue' => $sessionId];
+  }
+  
+  $ch = curl_init($url);
+  curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+  curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+  curl_setopt($ch, CURLOPT_POST, true);
+  curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($document));
+  curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+  
+  $response = curl_exec($ch);
+  $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+  curl_close($ch);
+  
+  return $httpCode === 200;
+}
+
+// Spara frågan i Firestore (tyst fail om det misslyckas)
+saveUserQuestionToFirestore($question, $sessionId);
+
+// Anropa OpenAI med gpt-5 modell
+$openaiApiKey = defined('OPENAI_API_KEY') ? OPENAI_API_KEY : null;
+
+if (!$openaiApiKey) {
+  error_log("OPENAI_API_KEY saknas i config.php");
+  sendError('OPENAI_API_KEY saknas i config.php', 500);
+}
+
+$answer = null;
+$provider = 'openai';
+
+// Wrap allt i try-catch för att fånga oväntade fel
+try {
+
+// Försök först med Responses API (gpt-5 modeller - synkront anrop)
+$apiUrl = 'https://api.openai.com/v1/responses';
+
+$requestData = [
+  'model' => 'gpt-5-mini', // Använd gpt-5-mini för snabbare svar
+  'input' => $prompt,
+  'max_output_tokens' => 1500,
+  'reasoning' => ['effort' => 'low'], // Snabbare svar (enligt OpenAI docs)
+];
+
+// Logga request för debugging (ta bort i produktion)
+error_log("OpenAI Responses API request: " . json_encode([
+  'model' => $requestData['model'],
+  'input_length' => strlen($requestData['input']),
+  'max_output_tokens' => $requestData['max_output_tokens'],
+  'has_reasoning' => isset($requestData['reasoning']),
+  'api_key_prefix' => substr($openaiApiKey, 0, 10) . '...' // Logga bara prefix för säkerhet
+]));
+
+$ch = curl_init($apiUrl);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+  'Content-Type: application/json',
+  'Authorization: Bearer ' . $openaiApiKey
+]);
 curl_setopt($ch, CURLOPT_POST, true);
-curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
-curl_setopt($ch, CURLOPT_TIMEOUT, 300); // 5 minuter timeout (backend kan ta upp till 5 min)
-curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10); // 10 sekunder för att ansluta
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($requestData));
+curl_setopt($ch, CURLOPT_TIMEOUT, 60); // 60 sekunder timeout för synkront svar
 
 $response = curl_exec($ch);
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 $curlError = curl_error($ch);
 curl_close($ch);
 
-if ($curlError) {
-  sendError('Fel vid anrop till Cloud Function: ' . $curlError, 500);
-}
-
-if ($httpCode !== 200) {
+// Hantera svaret - Responses API är synkront, svaret kommer direkt
+if ($curlError || $httpCode !== 200) {
+  error_log("OpenAI Responses API error: HTTP $httpCode, cURL: $curlError");
+  error_log("OpenAI Responses API full response: " . $response);
+  // Om det är ett JSON-fel, försök parsea det
   $errorData = json_decode($response, true);
-  $errorMsg = $errorData['error'] ?? 'Okänt fel från Cloud Function';
-  sendError($errorMsg, $httpCode);
+  if ($errorData && isset($errorData['error'])) {
+    error_log("OpenAI Responses API error details: " . json_encode($errorData['error']));
+  }
+  $answer = null; // Gå till fallback
+} else {
+  $responseData = json_decode($response, true);
+  
+  if (isset($responseData['error'])) {
+    $errorMsg = $responseData['error']['message'] ?? 'Unknown error';
+    $errorType = $responseData['error']['type'] ?? 'unknown';
+    error_log("OpenAI Responses API error: $errorType - $errorMsg");
+    $answer = null; // Gå till fallback
+  } elseif (isset($responseData['output_text'])) {
+    // *** ENKLA VÄGEN - direkt från synkront svar ***
+    $answer = $responseData['output_text'];
+    error_log("OpenAI Responses API: Got answer via output_text (length: " . strlen($answer) . ")");
+  } elseif (isset($responseData['output'][0]['content'][0]['text'])) {
+    // Mer low-level sätt
+    $answer = $responseData['output'][0]['content'][0]['text'];
+    error_log("OpenAI Responses API: Got answer via output[0].content[0].text (length: " . strlen($answer) . ")");
+  } else {
+    // Logga att svaret inte innehöll text
+    error_log("OpenAI Responses API: no text in response. Response structure: " . json_encode(array_keys($responseData ?? [])));
+    error_log("OpenAI Responses API full response: " . substr($response, 0, 1000));
+    $answer = null; // Gå till fallback
+  }
 }
 
-$result = json_decode($response, true);
-if (!$result || !isset($result['ok']) || !$result['ok']) {
-  $errorMsg = $result['error'] ?? 'Okänt fel från Cloud Function';
-  sendError($errorMsg, 500);
+// Fallback till Chat Completions API om Responses API inte fungerar
+// OBS: gpt-5-modeller fungerar INTE med /v1/chat/completions, använd gpt-4.1-modeller istället
+if (!$answer) {
+  $apiUrl = 'https://api.openai.com/v1/chat/completions';
+  
+  // Prova olika gpt-4.1 modeller i fallback-ordning (de fungerar med Chat Completions)
+  $models = ['gpt-4.1-mini', 'gpt-4.1'];
+  
+  foreach ($models as $model) {
+    $requestData = [
+      'model' => $model,
+      'messages' => [
+        ['role' => 'user', 'content' => $prompt]
+      ],
+      'max_tokens' => 1500,
+      'temperature' => 0.8
+    ];
+    
+    $ch = curl_init($apiUrl);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+      'Content-Type: application/json',
+      'Authorization: Bearer ' . $openaiApiKey
+    ]);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($requestData));
+    curl_setopt($ch, CURLOPT_TIMEOUT, 120); // 2 minuter timeout
+    
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($ch);
+    curl_close($ch);
+    
+    // Logga fel för debugging
+    if ($curlError || $httpCode !== 200) {
+      error_log("OpenAI Chat Completions API error (model: $model): HTTP $httpCode, cURL: $curlError");
+      error_log("OpenAI Chat Completions API full response: " . $response);
+      // Om det är ett JSON-fel, försök parsea det
+      $errorData = json_decode($response, true);
+      if ($errorData && isset($errorData['error'])) {
+        error_log("OpenAI Chat Completions API error details: " . json_encode($errorData['error']));
+      }
+    }
+    
+    if (!$curlError && $httpCode === 200) {
+      $responseData = json_decode($response, true);
+      
+      // Kontrollera om det finns ett fel i response
+      if (isset($responseData['error'])) {
+        $errorMsg = $responseData['error']['message'] ?? 'Unknown error';
+        $errorType = $responseData['error']['type'] ?? 'unknown';
+        $errorCode = $responseData['error']['code'] ?? 'unknown';
+        error_log("OpenAI Chat Completions API error (model: $model): $errorType ($errorCode) - $errorMsg");
+        
+        // Om modellen inte finns, prova nästa direkt
+        if (strpos($errorMsg, 'model') !== false || strpos($errorCode, 'model') !== false) {
+          continue; // Prova nästa modell
+        }
+        // För andra fel, försök ändå nästa modell
+        continue;
+      }
+      
+      if (isset($responseData['choices'][0]['message']['content'])) {
+        $answer = $responseData['choices'][0]['message']['content'];
+        // Kontrollera om svaret är ett felmeddelande
+        if (stripos($answer, 'jag är ledsen') !== false || stripos($answer, 'i cannot') !== false) {
+          error_log("OpenAI returned error message in content: " . substr($answer, 0, 200));
+          $answer = null; // Sätt till null så vi kan prova nästa modell
+          continue;
+        }
+        break; // Lyckades, sluta försöka andra modeller
+      }
+    }
+  }
 }
 
-echo json_encode([
-  'success' => true,
-  'data' => [
-    'answer' => $result['answer'] ?? '',
-    'provider' => $result['provider'] ?? 'unknown'
-  ]
-], JSON_UNESCAPED_UNICODE);
+if (!$answer) {
+  // Logga detaljerat fel för debugging
+  $errorDetails = [
+    'openai_key_set' => !empty($openaiApiKey),
+    'openai_key_length' => $openaiApiKey ? strlen($openaiApiKey) : 0,
+    'tried_responses_api' => true,
+    'tried_chat_completions' => true,
+    'models_tried' => ['gpt-5-mini (Responses API)', 'gpt-4.1-mini (Chat Completions)', 'gpt-4.1 (Chat Completions)']
+  ];
+  error_log("Failed to get answer from OpenAI. Details: " . json_encode($errorDetails));
+  
+  // Returnera mer detaljerat felmeddelande
+  error_log("DEBUG: answer is empty, returning 500. Last HTTP code: " . ($httpCode ?? 'N/A'));
+  $errorMessage = 'Kunde inte generera svar med OpenAI. ';
+  if (empty($openaiApiKey)) {
+    $errorMessage .= 'API-nyckel saknas i config.php. ';
+  } else {
+    $errorMessage .= 'API-anropet misslyckades. Kontrollera att API-nyckeln är giltig och att modellerna är tillgängliga. ';
+  }
+  $errorMessage .= 'Kontrollera server logs för mer information.';
+  
+  sendError($errorMessage, 500);
+}
 
+  echo json_encode([
+    'success' => true,
+    'data' => [
+      'answer' => $answer,
+      'provider' => $provider
+    ]
+  ], JSON_UNESCAPED_UNICODE);
+  
+} catch (Exception $e) {
+  error_log("Chat.php exception: " . $e->getMessage());
+  error_log("Stack trace: " . $e->getTraceAsString());
+  sendError('Ett oväntat fel uppstod: ' . $e->getMessage(), 500);
+} catch (Error $e) {
+  error_log("Chat.php fatal error: " . $e->getMessage());
+  error_log("Stack trace: " . $e->getTraceAsString());
+  sendError('Ett kritiskt fel uppstod: ' . $e->getMessage(), 500);
+}

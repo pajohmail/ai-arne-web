@@ -74,43 +74,21 @@ export async function chatHandler(req: any, res: any) {
     const trimmedQuestion = question.trim();
     console.log(`📝 Received question: "${trimmedQuestion.substring(0, 100)}..."`);
     
-    // Validera att frågan är AI-relaterad genom att fråga AI själv
-    const validateWithAI = async (q: string): Promise<boolean> => {
-      const validationPrompt = `Är följande fråga relaterad till AI (artificiell intelligens), maskininlärning, teknologi, tech-företag eller AI-utveckling?
-
-Fråga: "${q}"
-
-Svara ENDAST med "JA" eller "NEJ" utan någon förklaring.`;
-
-      try {
-        const validationResponse = await createResponse(validationPrompt, {
-          model: 'gpt-5-mini',
-          maxTokens: 10,
-          temperature: 0.1
-        });
-        
-        console.log(`   Validation API call successful using ${validationResponse.provider} API`);
-
-        const answer = validationResponse.content.trim().toLowerCase();
-        // Acceptera "ja", "yes", "j", "y" eller varianter
-        return answer.startsWith('ja') || answer.startsWith('yes') || answer === 'j' || answer === 'y';
-      } catch (err: any) {
-        console.error('❌ Validation error:', err);
-        console.error(`   Error details: ${err?.message || 'Unknown error'}`);
-        // Vid fel, tillåt frågan (fail-open för bättre användarupplevelse)
-        return true;
-      }
-    };
-
-    // Validera frågan med AI
-    console.log(`💬 Validating question: "${trimmedQuestion.substring(0, 50)}..."`);
-    const isAiRelated = await validateWithAI(trimmedQuestion);
-    console.log(`   Validation result: ${isAiRelated ? '✅ AI-related' : '❌ Not AI-related'}`);
+    // Enkel snabb validering - bara blockera uppenbart irrelevanta frågor
+    // Vi hoppar över AI-validering för att spara tid
+    const obviousIrrelevantKeywords = [
+      'recept', 'mat', 'matlagning', 'kök', 'baka', 'tårta', 'kaka',
+      'middag', 'lunch', 'frukost', 'ingrediens', 'kräm', 'sås',
+      'sport', 'fotboll', 'hockey', 'tennis', 'golf', 'träning',
+      'hälsa', 'sjukdom', 'medicin', 'läkare', 'sjukvård'
+    ];
+    const qLower = trimmedQuestion.toLowerCase();
+    const isObviouslyIrrelevant = obviousIrrelevantKeywords.some(keyword => qLower.includes(keyword));
     
-    if (!isAiRelated) {
+    if (isObviouslyIrrelevant) {
       return res.status(400).json({ 
         ok: false, 
-        error: 'Frågan måste vara relaterad till AI, teknologi eller tech-företag. Försök igen med en relevant fråga.' 
+        error: 'Frågan verkar inte vara relaterad till AI eller teknologi. Försök igen med en relevant fråga.' 
       });
     }
 
@@ -127,19 +105,19 @@ VIKTIGT - DAGENS DATUM: ${currentDate} (${currentYear}-${String(currentMonth).pa
 Frågan: ${trimmedQuestion}
 
 KRITISKA INSTRUKTIONER - LÄS NOGA:
-1. Du HAR tillgång till websökningar - använd dem för att hitta de SENASTE nyheterna från ${currentYear}
-2. Gör websökningar för att hitta aktuell information om ämnet
+1. Du HAR tillgång till websökningar - DU MÅSTE använda dem för att hitta de SENASTE nyheterna från ${currentYear}
+2. Gör websökningar för att hitta aktuell information om ämnet - använd ALDRIG bara din träningsdata
 3. Prioritera information från de senaste 3 månaderna (${currentYear})
 4. Inkludera länkar och källor från dina websökningar
 5. Om informationen är äldre än 6 månader, markera det tydligt
-6. Din träningsdata slutar typ april 2024 - använd websökningar för aktuell information
+6. Din träningsdata slutar typ april 2024 - använd ALLTID websökningar för aktuell information
 
 VIKTIGT: Skriv MINST 500 ord. Var inte kortfattad. Undvik korta svar. Var detaljerad och utförlig.
 
 STEG-FÖR-STEG PROCESS:
 1. Gör först en websökning om ämnet för att hitta de senaste nyheterna från ${currentYear}
 2. Hitta minst 3-5 aktuella källor från de senaste 3 månaderna
-3. Basera ditt svar PRIMÄRT på dessa websökningar
+3. Basera ditt svar PRIMÄRT på dessa websökningar - INTE på din träningsdata
 4. Inkludera länkar till källorna du hittar
 5. Om informationen är äldre än 6 månader, markera det tydligt
 
@@ -151,152 +129,17 @@ Svara på svenska med:
 - Om informationen är äldre, markera det tydligt
 - Relevant information om AI-utveckling och nyheter, inklusive kontext och historik när det är lämpligt
 
-Kom ihåg: Använd websökningar för att hitta aktuell information från ${currentYear}. Prioritera information från de senaste 3 månaderna och inkludera länkar till källorna.
+Kom ihåg: Använd websökningar för att hitta aktuell information från ${currentYear}. Prioritera information från de senaste 3 månaderna och inkludera länkar till källorna. Använd ALDRIG bara din träningsdata.
 
 Skriv en längre, mer detaljerad artikel (MINST 500 ord, gärna 600-800 ord) som är både informativ och underhållande. Var inte rädd för att vara långrandig - läsaren vill ha djupgående information. Inkludera exempel, jämförelser och relevanta sammanhang. Använd ironi och svenska humor flitigt för att göra läsningen mer engagerande.`;
 
-    // Prioritera OpenAI med web search för att generera svar
-    // OpenAI har web_search_preview tool som fungerar bättre än Anthropic
-    const openaiApiKey = process.env.OPENAI_API_KEY;
-    const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
-    let response;
-    
-    console.log(`🔍 API keys check - OpenAI: ${openaiApiKey ? '✅' : '❌'}, Anthropic: ${anthropicApiKey ? '✅' : '❌'}`);
-    
-    if (openaiApiKey) {
-      console.log(`🌐 Using OpenAI API with web search enabled`);
-      const openai = new OpenAI({ apiKey: openaiApiKey });
-      
-      try {
-        // Använd Responses API med web_search_preview tool för web search
-        // Responses API kräver gpt-5 modeller, inte gpt-4o
-        console.log(`   Making OpenAI Responses API call with web_search_preview tool...`);
-        const requestOptions: any = {
-          model: 'gpt-5', // Responses API kräver gpt-5 modeller
-          input: prompt,
-          max_output_tokens: 2000,
-          tools: [{ type: 'web_search_preview' }]
-        };
-        
-        const apiStartTime = Date.now();
-        let responseAPI = await (openai as any).responses.create(requestOptions);
-        console.log(`   Initial response status: ${responseAPI?.status || 'unknown'}`);
-        
-        // Responses API är asynkront - polla tills status är "complete"
-        let pollCount = 0;
-        const maxPolls = 60; // Max 60 polls (5 minuter med 5 sekunders intervall)
-        const pollInterval = 5000; // 5 sekunder mellan polls
-        
-        while (responseAPI?.status === 'incomplete' && pollCount < maxPolls) {
-          pollCount++;
-          console.log(`   Polling response (attempt ${pollCount}/${maxPolls}), status: ${responseAPI.status}`);
-          
-          // Vänta innan nästa poll
-          await new Promise(resolve => setTimeout(resolve, pollInterval));
-          
-          // Hämta uppdaterad response med response ID
-          if (responseAPI?.id) {
-            try {
-              responseAPI = await (openai as any).responses.retrieve(responseAPI.id);
-            } catch (pollError: any) {
-              console.error(`   Poll error:`, pollError?.message);
-              break;
-            }
-          } else {
-            console.warn(`   No response ID found, cannot poll`);
-            break;
-          }
-        }
-        
-        const apiTime = Date.now() - apiStartTime;
-        console.log(`   Responses API call completed in ${apiTime}ms after ${pollCount} polls`);
-        console.log(`   Final response status: ${responseAPI?.status || 'unknown'}`);
-        
-        // Hämta content från response
-        const content = responseAPI?.output_text || responseAPI?.output?.text || '';
-        
-        if (content && responseAPI?.status === 'complete') {
-          console.log(`✅ OpenAI Responses API call successful with web search, content length: ${content.length}`);
-          response = {
-            content,
-            provider: 'openai' as const
-          };
-        } else {
-          console.warn(`⚠️  OpenAI API call returned empty content or incomplete status. Status: ${responseAPI?.status}, Content length: ${content.length}`);
-          if (responseAPI?.error) {
-            console.warn(`   Response error:`, responseAPI.error);
-          }
-          throw new Error(`OpenAI Responses API returned incomplete status: ${responseAPI?.status || 'unknown'}`);
-        }
-      } catch (error: any) {
-        console.error('❌ OpenAI API failed:', error?.message || error);
-        console.error('   Error details:', JSON.stringify({
-          message: error?.message,
-          status: error?.status,
-          statusCode: error?.statusCode,
-          type: error?.type,
-          code: error?.code
-        }, null, 2));
-        
-        // Fallback till Anthropic om OpenAI misslyckas
-        if (anthropicApiKey) {
-          console.log(`🔄 Falling back to Anthropic...`);
-          const anthropic = new Anthropic({ apiKey: anthropicApiKey });
-          try {
-            const message = await anthropic.messages.create({
-              model: 'claude-3-5-sonnet-20241022',
-              max_tokens: 2000,
-              messages: [{
-                role: 'user',
-                content: prompt
-              }]
-            });
-            const anthropicContent = message.content[0]?.type === 'text' ? message.content[0].text : '';
-            if (anthropicContent) {
-              response = {
-                content: anthropicContent,
-                provider: 'anthropic' as const
-              };
-            } else {
-              throw new Error('No content in Anthropic response');
-            }
-          } catch (anthropicError: any) {
-            console.error('❌ Anthropic fallback also failed:', anthropicError?.message);
-            throw error; // Throw original OpenAI error
-          }
-        } else {
-          throw error;
-        }
-      }
-    } else if (anthropicApiKey) {
-      console.log(`⚠️  OpenAI API key not found, using Anthropic`);
-      // Använd Anthropic om OpenAI inte är tillgänglig
-      const anthropic = new Anthropic({ apiKey: anthropicApiKey });
-      try {
-        const message = await anthropic.messages.create({
-          model: 'claude-3-5-sonnet-20241022',
-          max_tokens: 2000,
-          messages: [{
-            role: 'user',
-            content: prompt
-          }]
-        });
-        const content = message.content[0]?.type === 'text' ? message.content[0].text : '';
-        if (content) {
-          response = {
-            content,
-            provider: 'anthropic' as const
-          };
-        } else {
-          throw new Error('No content in Anthropic response');
-        }
-      } catch (error: any) {
-        console.error('❌ Anthropic API failed:', error?.message);
-        throw error;
-      }
-    } else {
-      throw new Error('No API keys available');
-    }
+    // Använd createResponse helper med web search aktiverat för bättre hantering
+    console.log(`🌐 Using createResponse helper with web search enabled`);
+    const response = await createResponse(prompt, {
+      model: 'gpt-5-mini', // Använd gpt-5-mini för snabbare svar
+      maxTokens: 1500, // Minska från 2000 till 1500 för snabbare svar
+      enableWebSearch: true // KRITISKT: Aktivera web search
+    });
     
     const contentLength = response.content.length;
     const wordCount = response.content.split(/\s+/).length;
@@ -308,12 +151,16 @@ Skriv en längre, mer detaljerad artikel (MINST 500 ord, gärna 600-800 ord) som
       console.warn(`⚠️  WARNING: Generated response is shorter than expected (${wordCount} words, expected 500+)`);
     }
 
-    // Spara frågan i Firestore (inte svaret)
+    // Spara frågan i Firestore (inte svaret) - förbättrad felhantering
     try {
-      await saveUserQuestion(trimmedQuestion, sessionId);
-    } catch (saveError) {
-      console.error('Failed to save question to Firestore:', saveError);
-      // Fortsätt ändå, sparandet är inte kritiskt
+      console.log(`💾 Saving question to Firestore...`);
+      const saveResult = await saveUserQuestion(trimmedQuestion, sessionId);
+      console.log(`✅ Question saved successfully with ID: ${saveResult.id}`);
+    } catch (saveError: any) {
+      console.error('❌ Failed to save question to Firestore:', saveError);
+      console.error(`   Error details: ${saveError?.message || 'Unknown error'}`);
+      console.error(`   Stack: ${saveError?.stack || 'No stack trace'}`);
+      // Fortsätt ändå, sparandet är inte kritiskt för att returnera svaret
     }
 
     const totalTime = Date.now() - startTime;

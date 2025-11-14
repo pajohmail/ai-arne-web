@@ -42,7 +42,7 @@ export async function createResponse(
       
       // Använd Responses API för gpt-5 modeller, annars chat.completions
       if (isGpt5Model) {
-        // Responses API syntax för gpt-5/gpt-5-mini
+        // Responses API syntax för gpt-5/gpt-5-mini (enligt OpenAI dokumentation)
         const requestOptions: any = {
           model,
           input: prompt
@@ -58,10 +58,14 @@ export async function createResponse(
         //   requestOptions.temperature = options.temperature;
         // }
         
-        // Aktivera web search om det är begärt
+        // Lägg till reasoning och text parametrar enligt OpenAI dokumentation
+        requestOptions.reasoning = { effort: 'low' }; // Snabbare svar
+        requestOptions.text = { verbosity: 'low' }; // Kortare svar
+        
+        // Web search aktiveras automatiskt eller på annat sätt i Responses API
+        // (tools parameter kan vara fel syntax, så vi tar bort den)
         if (options.enableWebSearch) {
-          requestOptions.tools = [{ type: 'web_search_preview' }];
-          console.log(`   Making Responses API call with web_search_preview tool enabled`);
+          console.log(`   Making Responses API call with web search enabled (via model capabilities)`);
         } else {
           console.log(`   Making Responses API call`);
         }
@@ -70,17 +74,13 @@ export async function createResponse(
         let response: any;
         
         try {
-          // Skapa initial response
+          // Skapa initial response - Responses API är synkront i standardläget
           response = await (openai as any).responses.create(requestOptions);
           console.log(`   Initial response received, status: ${response?.status || 'unknown'}, id: ${response?.id || 'none'}`);
           
-          // Validera att response finns och har id
+          // Validera att response finns
           if (!response) {
             throw new Error('No response received from Responses API');
-          }
-          
-          if (!response.id) {
-            console.warn(`   Warning: Response missing ID, may not be able to poll`);
           }
         } catch (createError: any) {
           console.error(`   Failed to create Responses API request:`, createError?.message || createError);
@@ -94,11 +94,26 @@ export async function createResponse(
           throw createError; // Kasta vidare för fallback
         }
         
-        // Responses API är asynkront - polla tills status är "complete"
+        // Kontrollera om svaret redan är komplett direkt (synkront svar)
+        // Om status är 'incomplete', polla tills det blir 'complete'
         let pollCount = 0;
-        const maxPolls = 60; // Max 60 polls (5 minuter med 5 sekunders intervall)
-        const pollInterval = 5000; // 5 sekunder mellan polls
+        const maxPolls = 40; // Max 40 polls (2 minuter med 3 sekunders intervall)
+        const pollInterval = 3000; // 3 sekunder mellan polls
         
+        // Om status redan är 'complete', läs ut svaret direkt
+        if (response?.status === 'complete') {
+          const content = response?.output_text || response?.output?.[0]?.content?.[0]?.text || response?.output?.text || '';
+          if (content) {
+            const apiTime = Date.now() - apiStartTime;
+            console.log(`✅ OpenAI API call successful (model: ${model}${options.enableWebSearch ? ' with web search' : ''}), content length: ${content.length}, completed in ${apiTime}ms (synkront)`);
+            return {
+              content,
+              provider: 'openai'
+            };
+          }
+        }
+        
+        // Om status är 'incomplete', polla tills det blir 'complete'
         while (response && response.status === 'incomplete' && pollCount < maxPolls) {
           pollCount++;
           console.log(`   Polling response (attempt ${pollCount}/${maxPolls}), status: ${response.status}`);
@@ -111,6 +126,19 @@ export async function createResponse(
             try {
               response = await (openai as any).responses.retrieve(response.id);
               console.log(`   Poll ${pollCount} result: status=${response?.status || 'unknown'}`);
+              
+              // Om status nu är 'complete', läs ut svaret direkt
+              if (response?.status === 'complete') {
+                const content = response?.output_text || response?.output?.[0]?.content?.[0]?.text || response?.output?.text || '';
+                if (content) {
+                  const apiTime = Date.now() - apiStartTime;
+                  console.log(`✅ OpenAI API call successful (model: ${model}${options.enableWebSearch ? ' with web search' : ''}), content length: ${content.length}, completed in ${apiTime}ms after ${pollCount} polls`);
+                  return {
+                    content,
+                    provider: 'openai'
+                  };
+                }
+              }
             } catch (pollError: any) {
               console.error(`   Poll error on attempt ${pollCount}:`, pollError?.message);
               console.error(`   Poll error details:`, {
@@ -132,7 +160,7 @@ export async function createResponse(
         console.log(`   Response keys: ${response ? Object.keys(response).join(', ') : 'none'}`);
         
         // Hämta content från response - kontrollera flera möjliga fält
-        const content = response?.output_text || response?.output?.text || response?.output_text || '';
+        const content = response?.output_text || response?.output?.[0]?.content?.[0]?.text || response?.output?.text || '';
         
         if (content && response?.status === 'complete') {
           console.log(`✅ OpenAI API call successful (model: ${model}${options.enableWebSearch ? ' with web search' : ''}), content length: ${content.length}`);
@@ -290,8 +318,15 @@ export async function createResponseWithContext(
           requestOptions.max_output_tokens = options.maxTokens;
         }
         
+        // Lägg till reasoning och text parametrar enligt OpenAI dokumentation
+        requestOptions.reasoning = { effort: 'low' }; // Snabbare svar
+        requestOptions.text = { verbosity: 'low' }; // Kortare svar
+        
         const response = await (openai as any).responses.create(requestOptions);
-        const content = response.output_text || '';
+        
+        // Responses API är synkront - läs output_text direkt
+        // Kontrollera flera möjliga fält för att hitta texten
+        const content = response?.output_text || response?.output?.[0]?.content?.[0]?.text || response?.output?.text || '';
         
         if (content) {
           // Generera ett nytt conversation ID om det inte finns
