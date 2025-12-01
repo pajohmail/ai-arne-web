@@ -132,6 +132,7 @@ export async function upsertPostFromRelease(release: UpsertNewsArgs) {
     const docRef = await withRetry<any>(() => postsRef.add(postData));
     return {
       id: docRef.id,
+      slug,
       updated: false
     };
   });

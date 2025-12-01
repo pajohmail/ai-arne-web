@@ -22,17 +22,39 @@ export interface LLMNewsResponse {
 }
 
 /**
+ * Beräknar måndag 09:00 som veckans startpunkt
+ */
+function getWeekStartMonday(): Date {
+  const now = new Date();
+  const dayOfWeek = now.getDay(); // 0 = söndag, 1 = måndag, etc.
+  const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Antal dagar tillbaka till måndag
+  
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - daysToMonday);
+  monday.setHours(9, 0, 0, 0); // Sätt till 09:00
+  
+  return monday;
+}
+
+/**
  * Använder LLM för att hitta veckans 10 viktigaste AI-relaterade nyheter
+ * Veckan räknas från måndag 09:00
  */
 export async function findTopAINewsWithLLM(): Promise<LLMNewsItem[]> {
-  const currentDate = new Date().toLocaleDateString('sv-SE', { year: 'numeric', month: 'long', day: 'numeric' });
-  const currentYear = new Date().getFullYear();
+  const now = new Date();
+  const weekStart = getWeekStartMonday();
+  const currentDate = now.toLocaleDateString('sv-SE', { year: 'numeric', month: 'long', day: 'numeric' });
+  const weekStartDate = weekStart.toLocaleDateString('sv-SE', { year: 'numeric', month: 'long', day: 'numeric' });
+  const currentYear = now.getFullYear();
   
-  const prompt = `Du är en AI-nyhetsexpert som identifierar veckans 10 viktigaste AI-relaterade nyheter. 
+  const prompt = `Du är en AI-nyhetsexpert som identifierar veckans 10 viktigaste AI-relaterade nyheter.
 
-VIKTIGT - DAGENS DATUM: ${currentDate} (${currentYear})
+VIKTIGT - TIDSPUNKTER:
+- DAGENS DATUM: ${currentDate} (${currentYear})
+- VECKANS START (MÅNDAG 09:00): ${weekStartDate} kl 09:00
+- Du ska söka efter nyheter som har skett FRÅN ${weekStartDate} kl 09:00 TILL ${currentDate}
 
-KRITISKT: Du MÅSTE använda web search-verktyget för att söka efter aktuella nyheter online. Använd INTE din träningsdata - sök aktivt efter nyheter från den senaste veckan med web search-verktyget.
+KRITISKT: Du MÅSTE använda web search-verktyget för att söka efter aktuella nyheter online. Använd INTE din träningsdata - sök aktivt efter nyheter från denna vecka (från måndag 09:00) med web search-verktyget.
 
 Fokusera på:
 - AI-utveckling och programmering
@@ -47,17 +69,25 @@ Exkludera:
 - Visuella AI-tjänster som inte är relevanta för utveckling
 
 STEG-FÖR-STEG:
-1. Använd web search-verktyget för att söka efter "AI news ${currentYear}" och "AI development news this week"
-2. Hitta de 10 viktigaste AI-nyheterna från den senaste veckan
+1. Använd web search-verktyget för att söka efter "AI news ${currentYear} this week" och "AI development news since ${weekStartDate}"
+2. Hitta de 10 viktigaste AI-nyheterna från denna vecka (från måndag 09:00)
 3. Inkludera länkar till källor från dina web search-resultat
-4. Alla titlar och sammanfattningar MÅSTE vara på svenska
+4. ALLA titlar och sammanfattningar MÅSTE vara på svenska - INGEN engelska
+5. Översätt alla engelska nyheter till svenska innan du returnerar dem
+
+SPRÅK-KRAV:
+- ALLA titlar MÅSTE vara på svenska
+- ALLA sammanfattningar MÅSTE vara på svenska
+- Översätt ALLA engelska nyheter till svenska
+- Använd svenska termer och uttryck
+- INGEN engelska text i titlar eller sammanfattningar
 
 VIKTIGT: Returnera ENDAST validerad JSON utan extra text. Exakt format:
 {
   "news": [
     {
-      "title": "Nyhetstitel på svenska",
-      "summary": "100-200 ord sammanfattning på svenska",
+      "title": "Nyhetstitel på svenska (INGEN engelska)",
+      "summary": "200-300 ord detaljerad sammanfattning på svenska (INGEN engelska)",
       "sourceUrl": "https://källa.se/artikel",
       "sourceName": "Källans namn"
     }
@@ -67,24 +97,29 @@ VIKTIGT: Returnera ENDAST validerad JSON utan extra text. Exakt format:
 KRITISKA REGLER FÖR JSON:
 1. Returnera ENDAST JSON - ingen markdown, ingen extra text före eller efter
 2. Varje nyhet måste ha exakt 4 fält: title, summary, sourceUrl, sourceName
-3. ALLA titlar och sammanfattningar MÅSTE vara på svenska
+3. ALLA titlar och sammanfattningar MÅSTE vara på svenska - INGEN engelska
 4. sourceUrl och sourceName kan vara tomma strängar "" om källan saknas
 5. INGEN trailing comma före ] eller }
 6. Alla strängar måste vara korrekt escaped med dubbla citattecken
 7. Returnera exakt 10 nyheter
-8. Varje sammanfattning: 100-200 ord, informativ, på svenska
+8. Varje sammanfattning: 200-300 ord, detaljerad och informativ, på svenska
 9. Kontrollera att JSON är validerad innan du returnerar den`;
 
   try {
-    console.log(`🔍 Finding top 10 AI news with web search enabled...`);
+    const searchStartTime = Date.now();
+    console.log(`🔍 Finding top 10 AI news with web search enabled (week starting ${weekStartDate} 09:00)...`);
+    console.log(`📅 Week start: ${weekStartDate} 09:00, Current date: ${currentDate}`);
+    
     const response = await createResponse(prompt, {
-      model: 'gpt-5', // Använd gpt-5 för bäst träffsäkerhet
-      maxTokens: 4000, // Öka för att hantera 10 nyheter
+      model: 'gpt-5', // Använd gpt-5 för bäst träffsäkerhet och web search
+      maxTokens: 6000, // Öka för att hantera 10 nyheter med längre sammanfattningar (200-300 ord)
       temperature: 0.7,
-      enableWebSearch: true // Aktivera web search
+      enableWebSearch: true // Aktivera web search - KRITISKT för att hitta aktuella nyheter
     });
     
-    console.log(`📰 LLM news search completed using ${response.provider} API`);
+    const searchDuration = Date.now() - searchStartTime;
+    console.log(`✅ LLM news search completed in ${searchDuration}ms using ${response.provider} API`);
+    console.log(`📏 Response length: ${response.content.length} characters`);
 
         const responseText = response.content.trim();
         
@@ -285,7 +320,7 @@ Titel: ${newsItem.title}
 Sammanfattning: ${newsItem.summary}
 Källa: ${newsItem.sourceName}
 
-VIKTIGT: Skriv en omarbetad artikel på 500-800 ord (MINST 500 ord, gärna 600-800 ord) som:
+VIKTIGT: Skriv en omarbetad artikel på 800-1200 ord (MINST 800 ord, gärna 1000-1200 ord) som:
 - Behåller all viktig information från originalnyheten
 - Är underhållande och engagerande att läsa
 - Har en tydlig ironisk touch och svenska humor genom HELA texten
@@ -294,13 +329,20 @@ VIKTIGT: Skriv en omarbetad artikel på 500-800 ord (MINST 500 ord, gärna 600-8
 - Inkluderar kontext, bakgrundsinformation och relevanta detaljer
 - Är skriven på svenska med svenska humor och ironi
 - Var inte rädd för att vara långrandig - läsaren vill ha djupgående information
+- ALLA texter MÅSTE vara på svenska - INGEN engelska
+
+SPRÅK-KRAV:
+- ALLA texter MÅSTE vara på svenska
+- Översätt ALLA engelska termer till svenska
+- Använd svenska termer och uttryck
+- INGEN engelska text i artikeln
 
 Skriv artikeln direkt utan extra formatering. Använd paragraf-struktur med tydliga avsnitt.`;
 
   try {
     const response = await createResponse(prompt, {
       model: 'gpt-5-mini',
-      maxTokens: 2000, // Öka från 500 till 2000 för längre texter (500-800 ord)
+      maxTokens: 3000, // Öka till 3000 för längre texter (800-1200 ord)
       temperature: 0.8 // Högre temperatur för mer kreativitet och humor
     });
     
@@ -315,22 +357,29 @@ Skriv artikeln direkt utan extra formatering. Använd paragraf-struktur med tydl
       .map(p => p.trim())
       .filter(p => p.length > 0);
     
-    // Skapa HTML-innehåll - kodar endast textinnehåll, inte HTML-strukturen
+    // Skapa HTML-innehåll - kodar endast textinnehåll för att undvika XSS
     // Varje paragraf blir en <p> tag med kodat textinnehåll
+    // VIKTIGT: Använd sanitizeTextForHtml för att koda text, inte sanitizeHtml som kodar allt
     const htmlParagraphs = paragraphs.map(p => {
       // Koda textinnehållet för att undvika XSS, men behåll HTML-strukturen
+      // Använd he.encode direkt för att koda text, inte sanitizeHtml som kan dubbelkoda
       return `<p>${sanitizeHtml(p)}</p>`;
     });
+    
+    // För länkar, koda URL:en men inte texten (URL:er ska vara kodade)
+    const sourceLink = newsItem.sourceUrl 
+      ? `<p>Källa: <a href="${sanitizeHtml(newsItem.sourceUrl)}" rel="noopener" target="_blank">${sanitizeHtml(newsItem.sourceName || newsItem.sourceUrl)}</a></p>`
+      : `<p>Källa: ${sanitizeHtml(newsItem.sourceName || 'Okänd')}</p>`;
     
     const htmlContent = [
       `<p><strong>${sanitizeHtml(newsItem.title)}</strong></p>`,
       ...htmlParagraphs,
-      newsItem.sourceUrl ? `<p>Källa: <a href="${sanitizeHtml(newsItem.sourceUrl)}" rel="noopener" target="_blank">${sanitizeHtml(newsItem.sourceName || newsItem.sourceUrl)}</a></p>` : `<p>Källa: ${sanitizeHtml(newsItem.sourceName || 'Okänd')}</p>`
+      sourceLink
     ].join('\n');
 
     return {
       title: sanitizeHtml(newsItem.title),
-      content: htmlContent, // HTML-innehåll med korrekt formatering
+      content: htmlContent, // HTML-innehåll - frontend kommer att dekoda HTML-entiteter
       excerpt: sanitizeHtml(rewrittenSummary.slice(0, 280)),
       sourceUrl: newsItem.sourceUrl || '',
       source: newsItem.sourceName || 'LLM-sökning'
@@ -366,31 +415,50 @@ Skriv artikeln direkt utan extra formatering. Använd paragraf-struktur med tydl
  * Bearbetar och sparar allmänna nyheter från LLM-sökning
  */
 export async function processAndUpsertNews(newsItems: LLMNewsItem[]): Promise<number> {
+  const startTime = Date.now();
   let processed = 0;
+  let failed = 0;
 
-  console.log(`Processing ${newsItems.length} news items...`);
+  console.log(`🔄 Processing ${newsItems.length} news items...`);
 
-  for (const newsItem of newsItems) {
+  for (let i = 0; i < newsItems.length; i++) {
+    const itemStartTime = Date.now();
+    const newsItem = newsItems[i];
+    
     try {
-      console.log(`Processing news item: ${newsItem.title}`);
+      console.log(`📝 [${i + 1}/${newsItems.length}] Processing: "${newsItem.title}"`);
+      
       // Omarbeta nyheten med AI för att göra den underhållande
+      console.log(`  ⏳ Rewriting with AI...`);
+      const rewriteStart = Date.now();
       const processedItem = await rewriteNewsWithAI(newsItem);
-      console.log(`Rewritten news item: ${processedItem.title}, content length: ${processedItem.content.length}`);
+      const rewriteDuration = Date.now() - rewriteStart;
+      console.log(`  ✅ Rewritten in ${rewriteDuration}ms: ${processedItem.title} (${processedItem.content.length} chars)`);
       
       // Spara i databas
+      console.log(`  ⏳ Saving to Firestore...`);
+      const saveStart = Date.now();
       const result = await upsertGeneralNews(processedItem);
-      console.log(`Upserted news item: ${result.id}, slug: ${result.slug}, updated: ${result.updated}`);
+      const saveDuration = Date.now() - saveStart;
+      console.log(`  ✅ Saved in ${saveDuration}ms: id=${result.id}, slug=${result.slug}, updated=${result.updated}`);
+      
+      const itemDuration = Date.now() - itemStartTime;
+      console.log(`  ✅ Item ${i + 1} completed in ${itemDuration}ms`);
+      
       processed++;
     } catch (error: any) {
-      console.error(`Failed to process news item "${newsItem.title}":`, error);
-      console.error(`Error details:`, {
+      failed++;
+      const itemDuration = Date.now() - itemStartTime;
+      console.error(`  ❌ Item ${i + 1} failed after ${itemDuration}ms: "${newsItem.title}"`);
+      console.error(`  Error:`, {
         message: error?.message,
-        stack: error?.stack
+        stack: error?.stack?.split('\n').slice(0, 3).join('\n') // Bara första 3 raderna av stack
       });
       // Fortsätt med nästa nyhet även om denna misslyckas
     }
   }
 
-  console.log(`Successfully processed ${processed} out of ${newsItems.length} news items`);
+  const totalDuration = Date.now() - startTime;
+  console.log(`✅ Processing completed in ${totalDuration}ms: ${processed} succeeded, ${failed} failed out of ${newsItems.length} total`);
   return processed;
 }

@@ -17,39 +17,113 @@ export async function apiNewsHandler(req: any, res: any) {
 }
 
 export async function generalNewsHandler(req: any, res: any) {
+  const startTime = Date.now();
+  console.log('🚀 generalNewsHandler started at', new Date().toISOString());
+  
   try {
     const force = req.query?.force === '1' || req.body?.force === true;
+    console.log(`📋 Parameters: force=${force}`);
+    
+    console.log('⏳ Calling runGeneralNewsManager...');
     const result = await runGeneralNewsManager({ force });
-    return res.status(200).json({ ok: true, ...result });
+    
+    const duration = Date.now() - startTime;
+    console.log(`✅ generalNewsHandler completed in ${duration}ms`);
+    console.log(`📊 Result:`, JSON.stringify(result, null, 2));
+    
+    return res.status(200).json({ ok: true, ...result, duration: `${duration}ms` });
   } catch (err: any) {
-    console.error(err);
-    return res.status(500).json({ ok: false, error: err?.message || 'unknown error' });
+    const duration = Date.now() - startTime;
+    console.error('❌ generalNewsHandler failed after', duration, 'ms');
+    console.error('Error details:', {
+      message: err?.message,
+      stack: err?.stack,
+      name: err?.name,
+      code: err?.code
+    });
+    return res.status(500).json({ ok: false, error: err?.message || 'unknown error', duration: `${duration}ms` });
   }
 }
 
 // Behåll för bakåtkompatibilitet - kör både API-nyheter och generella nyheter
+// VIKTIGT: Kör i rätt ordning - först nyheter, sedan tutorials
 export async function managerHandler(req: any, res: any) {
+  const startTime = Date.now();
+  console.log('🚀 managerHandler started at', new Date().toISOString());
+
   try {
     const force = req.query?.force === '1' || req.body?.force === true;
-    
-    // Kör både API-nyheter och generella nyheter
+    console.log(`📋 Parameters: force=${force}`);
+
+    // STEG 1: Kör både API-nyheter och generella nyheter UTAN tutorials
+    console.log('📰 Step 1: Running news managers (skipping tutorials)...');
+    const step1Start = Date.now();
+
     const [apiResult, generalResult] = await Promise.allSettled([
-      runApiNewsManager({ force }),
+      runApiNewsManager({ force, skipTutorials: true }), // Hoppa över tutorials i detta steg
       runGeneralNewsManager({ force })
     ]);
-    
-    const apiNews = apiResult.status === 'fulfilled' ? apiResult.value : { processed: 0, error: apiResult.reason?.message };
+
+    const step1Duration = Date.now() - step1Start;
+    console.log(`✅ Step 1 completed in ${step1Duration}ms`);
+
+    const apiNews = apiResult.status === 'fulfilled' ? apiResult.value : { processed: 0, newsItems: [], error: apiResult.reason?.message };
     const generalNews = generalResult.status === 'fulfilled' ? generalResult.value : { processed: 0, error: generalResult.reason?.message };
-    
-    return res.status(200).json({ 
-      ok: true, 
-      apiNews: apiNews,
-      generalNews: generalNews,
-      totalProcessed: (apiNews.processed || 0) + (generalNews.processed || 0)
+
+    console.log(`📊 News processed - API: ${apiNews.processed}, General: ${generalNews.processed}`);
+
+    // STEG 2: Skapa tutorials för API-nyheter
+    let tutorialsCreated = 0;
+    if (apiNews.newsItems && apiNews.newsItems.length > 0) {
+      console.log(`📚 Step 2: Creating tutorials for ${apiNews.newsItems.length} API news items...`);
+      const step2Start = Date.now();
+
+      const { createOrUpdateTutorial } = await import('./agents/tutorialAgent.js');
+
+      for (const newsItem of apiNews.newsItems) {
+        try {
+          await createOrUpdateTutorial(newsItem.id, newsItem.release);
+          tutorialsCreated++;
+          console.log(`  ✅ Tutorial created for: ${newsItem.release.name}`);
+        } catch (tutorialError: any) {
+          console.error(`  ❌ Failed to create tutorial for ${newsItem.release.name}:`, tutorialError?.message);
+          // Fortsätt med nästa tutorial även om en misslyckas
+        }
+      }
+
+      const step2Duration = Date.now() - step2Start;
+      console.log(`✅ Step 2 completed in ${step2Duration}ms - ${tutorialsCreated} tutorials created`);
+    } else {
+      console.log('ℹ️  Step 2: No API news items to create tutorials for');
+    }
+
+    const totalDuration = Date.now() - startTime;
+    console.log(`✅ managerHandler completed successfully in ${totalDuration}ms`);
+
+    return res.status(200).json({
+      ok: true,
+      apiNews: {
+        processed: apiNews.processed,
+        error: 'error' in apiNews ? apiNews.error : undefined
+      },
+      generalNews: {
+        processed: generalNews.processed,
+        error: 'error' in generalNews ? generalNews.error : undefined
+      },
+      tutorials: {
+        created: tutorialsCreated
+      },
+      totalProcessed: (apiNews.processed || 0) + (generalNews.processed || 0),
+      duration: `${totalDuration}ms`
     });
   } catch (err: any) {
-    console.error(err);
-    return res.status(500).json({ ok: false, error: err?.message || 'unknown error' });
+    const totalDuration = Date.now() - startTime;
+    console.error(`❌ managerHandler failed after ${totalDuration}ms:`, err);
+    return res.status(500).json({
+      ok: false,
+      error: err?.message || 'unknown error',
+      duration: `${totalDuration}ms`
+    });
   }
 }
 

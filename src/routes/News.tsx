@@ -18,17 +18,26 @@ export default function News() {
     setLoading(true);
     setError(null);
     try {
+      console.log('[News] Loading news items, page:', page);
+      const startTime = Date.now();
       const res = await queryCollection({
         collectionId: 'news',
         orderByCreatedAtDesc: true,
         limit: PAGE_SIZE,
         offset: page * PAGE_SIZE,
       });
+      const loadTime = Date.now() - startTime;
+      console.log(`[News] Loaded ${res.length} items in ${loadTime}ms`);
+      
       const mapped = res.map(mapNews).filter(Boolean);
+      console.log(`[News] Mapped ${mapped.length} valid news items`);
+      console.log('[News] News titles:', mapped.map((n: any) => n?.title || 'No title').join(', '));
+      
       setItems((prev) => [...prev, ...mapped]);
       if (mapped.length < PAGE_SIZE) setEnd(true);
       setPage((p) => p + 1);
-    } catch {
+    } catch (err: any) {
+      console.error('[News] Error loading news:', err);
       setError('Kunde inte hämta nyheter.');
     } finally {
       setLoading(false);
