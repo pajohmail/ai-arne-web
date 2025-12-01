@@ -80,8 +80,8 @@ async function checkAPIKeys() {
     console.log(`   Provider: ${response.provider.toUpperCase()}`);
     console.log(`   Svar: ${response.content.substring(0, 100)}${response.content.length > 100 ? '...' : ''}`);
     console.log('');
-    
-    if (response.provider === 'anthropic') {
+
+    if (response.provider !== 'openai') {
       console.log('⚠️  OBS: Systemet använder Anthropic API (fallback-läge)');
       console.log('   Detta betyder att OpenAI API-nyckeln saknas eller misslyckades.');
       if (openaiConfigured) {
