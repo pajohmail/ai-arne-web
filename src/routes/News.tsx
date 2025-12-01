@@ -3,6 +3,7 @@ import Seo from '../components/Seo';
 import { EmptyState, ErrorState, Skeleton } from '../components/States';
 import { mapNews, queryCollection } from '../lib/firestore';
 import { Link } from 'react-router-dom';
+import { decodeHtmlEntities } from '../lib/sanitize';
 
 const PAGE_SIZE = 10;
 
@@ -59,8 +60,8 @@ export default function News() {
       <div className="card-list">
         {items.map((n: any) => (
           <article key={n.id} className="card">
-            <h3><Link to={`/news/${n.slug}`}>{n.title}</Link></h3>
-            {n.excerpt && <p className="muted">{n.excerpt}</p>}
+            <h3><Link to={`/news/${n.slug}`}>{decodeHtmlEntities(n.title)}</Link></h3>
+            {n.excerpt && <p className="muted">{decodeHtmlEntities(n.excerpt)}</p>}
           </article>
         ))}
       </div>

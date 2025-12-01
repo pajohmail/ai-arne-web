@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import Seo from '../components/Seo';
 import { ErrorState, Skeleton } from '../components/States';
-import { sendChatMessage, getSavedQuestions, type UserQuestionDoc, type ChatResponse } from '../lib/firestore';
+import { sendChatMessage, type ChatResponse } from '../lib/firestore';
 import { sanitizeHtml } from '../lib/sanitize';
 
 export default function Chat() {
@@ -10,8 +10,6 @@ export default function Chat() {
   const [error, setError] = useState<string | null>(null);
   const [answer, setAnswer] = useState<string | null>(null);
   const [provider, setProvider] = useState<'openai' | 'anthropic' | 'unknown'>('unknown');
-  const [savedQuestions, setSavedQuestions] = useState<UserQuestionDoc[]>([]);
-  const [loadingQuestions, setLoadingQuestions] = useState(false);
   const [sessionId] = useState(() => {
     // Generera ett session ID för att spåra användarens frågor
     return `session_${Date.now()}_${Math.random().toString(36).substring(7)}`;
@@ -31,10 +29,6 @@ export default function Chat() {
     return obviousNegativeKeywords.some(keyword => qLower.includes(keyword));
   };
 
-  // Hämta sparade frågor vid mount
-  useEffect(() => {
-    loadSavedQuestions();
-  }, []);
 
   // Scroll till botten när nytt svar kommer
   useEffect(() => {
@@ -42,19 +36,6 @@ export default function Chat() {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [answer]);
-
-  async function loadSavedQuestions() {
-    setLoadingQuestions(true);
-    try {
-      // Hämta alla sparade frågor (max 100 från API)
-      const questions = await getSavedQuestions(100);
-      setSavedQuestions(questions);
-    } catch (err) {
-      console.error('Failed to load saved questions:', err);
-    } finally {
-      setLoadingQuestions(false);
-    }
-  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -81,9 +62,6 @@ export default function Chat() {
       setAnswer(response.answer);
       setProvider(response.provider);
       setQuestion(''); // Rensa input
-      
-      // Uppdatera lista över sparade frågor
-      await loadSavedQuestions();
     } catch (err: any) {
       console.error('[Chat] Submit error:', err);
       const errorMessage = err?.message || 'Kunde inte skicka frågan. Försök igen.';
@@ -99,41 +77,6 @@ export default function Chat() {
     }
   }
 
-  async function handleQuestionClick(savedQuestion: UserQuestionDoc) {
-    const trimmedQuestion = savedQuestion.question.trim();
-    if (trimmedQuestion) {
-      setQuestion(trimmedQuestion);
-      await handleSubmitWithQuestion(trimmedQuestion);
-    }
-  }
-
-  async function handleSubmitWithQuestion(q: string) {
-    setLoading(true);
-    setError(null);
-    setAnswer(null);
-    setProvider('unknown');
-
-    try {
-      const response: ChatResponse = await sendChatMessage(q, sessionId);
-      setAnswer(response.answer);
-      setProvider(response.provider);
-      
-      // Uppdatera lista över sparade frågor
-      await loadSavedQuestions();
-    } catch (err: any) {
-      console.error('[Chat] Submit with question error:', err);
-      const errorMessage = err?.message || 'Kunde inte skicka frågan. Försök igen.';
-      
-      // Visa mer specifikt felmeddelande för timeout
-      if (errorMessage.includes('timeout') || errorMessage.includes('tog för lång tid')) {
-        setError('AI-svaret tog för lång tid att generera. Försök igen med en kortare eller enklare fråga.');
-      } else {
-        setError(errorMessage);
-      }
-    } finally {
-      setLoading(false);
-    }
-  }
 
   return (
     <div className="space-y-8">
@@ -142,52 +85,6 @@ export default function Chat() {
       <p className="muted">
         Ställ frågor om AI-nyheter, teknologi och tech-företag. T.ex. "Microsoft och deras AI-tankar om framtiden" eller "Vad är nytt inom OpenAI?".
       </p>
-
-      {/* Dropdown för tidigare sökningar */}
-      <div className="card">
-        <label htmlFor="previous-questions" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
-          Tidigare sökningar:
-        </label>
-        <select
-          id="previous-questions"
-          onChange={(e) => {
-            const selectedIndex = e.target.selectedIndex;
-            if (selectedIndex > 0 && savedQuestions.length > 0) { // Ignorera första option (placeholder)
-              const selectedQuestion = savedQuestions[selectedIndex - 1];
-              if (selectedQuestion) {
-                handleQuestionClick(selectedQuestion);
-                // Reset dropdown till placeholder
-                e.target.value = '';
-              }
-            }
-          }}
-          defaultValue=""
-          style={{
-            width: '100%',
-            padding: '0.75rem',
-            border: '1px solid #ccc',
-            borderRadius: '4px',
-            fontSize: '1rem',
-            fontFamily: 'inherit',
-            backgroundColor: 'white',
-            cursor: savedQuestions.length > 0 ? 'pointer' : 'not-allowed',
-          }}
-          disabled={loading || loadingQuestions || savedQuestions.length === 0}
-        >
-          <option value="" disabled>
-            {loadingQuestions 
-              ? 'Laddar tidigare sökningar...' 
-              : savedQuestions.length === 0 
-                ? 'Inga tidigare sökningar än' 
-                : `Välj en tidigare sökning (${savedQuestions.length} sparade)`}
-          </option>
-          {savedQuestions.map((q) => (
-            <option key={q.id} value={q.id}>
-              {q.question.length > 80 ? `${q.question.substring(0, 80)}...` : q.question}
-            </option>
-          ))}
-        </select>
-      </div>
 
       {/* Chat-formulär */}
       <form onSubmit={handleSubmit} className="card">

@@ -1,3 +1,15 @@
+/**
+ * Manager för API-nyheter från stora AI-leverantörer
+ *
+ * Denna modul koordinerar flödet för API-nyheter:
+ * - Hämtar releases från GitHub för OpenAI, Anthropic och Google
+ * - Skapar innehåll i Firestore med AI-genererat innehåll
+ * - Genererar tutorials för varje release
+ * - Publicerar på LinkedIn
+ *
+ * @module manager
+ */
+
 import { checkProviders, ProviderRelease } from './providers.js';
 import { upsertNews } from './newsAgent.js';
 import { createOrUpdateTutorial } from './tutorialAgent.js';
@@ -9,6 +21,25 @@ type NewsItem = {
   release: ProviderRelease;
 };
 
+/**
+ * Huvudfunktion som kör hela flödet för API-nyheter
+ *
+ * Funktionen:
+ * 1. Hämtar senaste releases från GitHub (OpenAI, Anthropic, Google)
+ * 2. Bearbetar max 3 senaste releases
+ * 3. Skapar AI-genererat innehåll och sparar i Firestore
+ * 4. Genererar tutorials för varje release (om skipTutorials är false)
+ * 5. Publicerar på LinkedIn (om credentials är konfigurerade)
+ *
+ * @param options - Konfigurationsalternativ
+ * @param options.force - Om true, hoppar över eventuella "har redan kört idag"-kontroller
+ * @param options.skipTutorials - Om true, hoppar över tutorial-generering (används av managerHandler)
+ * @returns Promise som resolverar till resultat med antal bearbetade releases och news items
+ *
+ * @example
+ * const result = await runApiNewsManager({ force: true });
+ * console.log(`Processed ${result.processed} releases`);
+ */
 export async function runApiNewsManager({ force = false, skipTutorials = false }: { force?: boolean; skipTutorials?: boolean } = {}) {
   const releases = await checkProviders();
   if (!releases.length) return { processed: 0, newsItems: [] };

@@ -1,3 +1,12 @@
+/**
+ * Agent för att generera tutorials för API-releases
+ * 
+ * Denna modul genererar omfattande, pedagogiska tutorials för API-releases
+ * med AI. Tutorials innehåller steg-för-steg-guider, exempelkod, och best practices.
+ * 
+ * @module tutorialAgent
+ */
+
 import { sanitizeHtml } from '../utils/text.js';
 import type { ProviderRelease } from './providers.js';
 import { upsertTutorialForPost } from '../services/upsert.js';
@@ -5,7 +14,32 @@ import { createResponse } from '../services/responses.js';
 
 /**
  * Skapar eller uppdaterar en tutorial med AI-genererat innehåll via Responses API
- * Fallback till statisk HTML om API-nycklar saknas
+ * 
+ * Funktionen genererar en omfattande tutorial (minst 1500 ord) med:
+ * - Introduktion och bakgrund
+ * - Förutsättningar och förberedelser
+ * - Installation och setup
+ * - Grundläggande användning med exempel
+ * - Avancerade exempel och use cases
+ * - Felhantering och troubleshooting
+ * - Best practices och tips
+ * - Ytterligare resurser
+ * 
+ * Använder OpenAI Responses API med högre temperatur för mer kreativitet och humor.
+ * Fallback till statisk HTML om API-nycklar saknas eller misslyckas.
+ * 
+ * @param postId - Firestore document ID för den relaterade posten
+ * @param release - Release-information från provider
+ * @returns Promise som resolverar till resultat med ID och updated-flagga
+ * 
+ * @example
+ * const result = await createOrUpdateTutorial(postId, {
+ *   provider: 'openai',
+ *   name: 'GPT-5',
+ *   version: '1.0.0',
+ *   summary: 'Ny modell...',
+ *   url: 'https://github.com/...'
+ * });
  */
 export async function createOrUpdateTutorial(postId: string, release: ProviderRelease) {
   const title = `Kom igång med ${release.name}${release.version ? ' ' + release.version : ''}`;
@@ -29,6 +63,8 @@ KRITISKA KRAV:
 - Inkludera konkreta exempel, kod-snippets, och förklaringar
 - Använd din kunskap om API:et, dess dokumentation, och relaterade teknologier
 - Var underhållande med ironisk touch och svenska humor, men håll det pedagogiskt
+
+KRITISKT: Inkludera INTE rubrik eller titel i ditt svar. Börja direkt med tutorialens innehåll. Rubriken hanteras separat.
 
 OBLIGATORISK STRUKTUR (varje sektion måste vara utförlig):
 
@@ -109,10 +145,13 @@ PEDAGOGISK TON:
 
 Kom ihåg: Detta ska vara en KOMPLETT guide som en utvecklare kan följa från början till slut. Var inte kortfattad - läsaren behöver all information.`;
 
+    // OBS: Temperature stöds inte för Responses API (gpt-5 modeller)
+    // Temperature-parametern ignoreras automatiskt av createResponse för GPT-5
     const response = await createResponse(prompt, {
       model: 'gpt-5-mini',
-      maxTokens: 5000, // Ökad från 3000 för längre tutorials
-      temperature: 0.8 // Ökad temperatur för mer kreativitet och humor
+      maxTokens: 8000, // Ökad för långa tutorials (1500+ ord)
+      temperature: 0.8, // Ignoreras för Responses API, men behålls för dokumentation
+      enableWebSearch: true // Aktivera web search för att hitta aktuell information om API:et
     });
 
     // Logga vilken provider som användes och längd
@@ -132,9 +171,9 @@ Kom ihåg: Detta ska vara en KOMPLETT guide som en utvecklare kan följa från b
     console.error(`Failed to generate tutorial with AI, using static template:`, error);
     
     // Fallback till statisk HTML om AI-generering misslyckas
+    // OBS: Inkludera INTE titel här - den hanteras separat i title-fältet
     html = sanitizeHtml(
       [
-        `<h2>${title}</h2>`,
         `<p>I den här guiden går vi igenom det nya API:et från ${release.provider}.</p>`,
         `<h3>Förutsättningar</h3>`,
         `<ul><li>Konto hos leverantören</li><li>API-nyckel</li><li>Node.js 22+</li></ul>`,
