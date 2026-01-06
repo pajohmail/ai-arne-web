@@ -1,14 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AuthRepository } from '@/repositories/AuthRepository';
-import { Auth, GoogleAuthProvider, UserCredential } from 'firebase/auth';
+import { Auth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from 'firebase/auth';
 
 // Mock Firebase auth
-vi.mock('firebase/auth', () => ({
-    GoogleAuthProvider: vi.fn(),
-    signInWithPopup: vi.fn(),
-    signOut: vi.fn(),
-    onAuthStateChanged: vi.fn(),
-}));
+vi.mock('firebase/auth', () => {
+    const GoogleAuthProviderMock = vi.fn();
+    (GoogleAuthProviderMock as any).credentialFromResult = vi.fn();
+    return {
+        GoogleAuthProvider: GoogleAuthProviderMock,
+        signInWithPopup: vi.fn(),
+        signOut: vi.fn(),
+        onAuthStateChanged: vi.fn(() => vi.fn()),
+    };
+});
 
 describe('AuthRepository', () => {
     let authRepository: AuthRepository;
@@ -16,12 +20,16 @@ describe('AuthRepository', () => {
 
     beforeEach(() => {
         mockAuth = {} as Auth;
-        // Access the mocked GoogleAuthProvider to spy on its methods
-        const { GoogleAuthProvider } = require('firebase/auth');
-        GoogleAuthProvider.mockImplementation(() => ({
-            addScope: vi.fn(),
-            setCustomParameters: vi.fn(),
-        }));
+        // Reset mocks
+        vi.clearAllMocks();
+
+        // Setup GoogleAuthProvider mock default behavior
+        (GoogleAuthProvider as unknown as ReturnType<typeof vi.fn>).mockImplementation(function () {
+            return {
+                addScope: vi.fn(),
+                setCustomParameters: vi.fn(),
+            };
+        });
 
         authRepository = new AuthRepository(mockAuth);
     });
@@ -32,7 +40,6 @@ describe('AuthRepository', () => {
 
     it('should sign in with Google and return user with required fields', async () => {
         // Mock signInWithPopup result
-        const { signInWithPopup, GoogleAuthProvider: MockProvider } = require('firebase/auth');
         const mockUser = {
             uid: '123',
             email: 'test@example.com',
@@ -40,10 +47,10 @@ describe('AuthRepository', () => {
             photoURL: 'http://example.com/photo.jpg',
             getIdToken: vi.fn().mockResolvedValue('mock-token'),
         };
-        signInWithPopup.mockResolvedValue({ user: mockUser });
+        (signInWithPopup as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ user: mockUser });
 
         // Mock credential result
-        MockProvider.credentialFromResult = vi.fn().mockReturnValue({ accessToken: 'access-token' });
+        (GoogleAuthProvider.credentialFromResult as unknown as ReturnType<typeof vi.fn>).mockReturnValue({ accessToken: 'access-token' });
 
         const user = await authRepository.signInWithGoogle();
 
@@ -53,17 +60,9 @@ describe('AuthRepository', () => {
     });
 
     it('should include Drive and Cloud Platform scopes in Google provider', async () => {
-        // Get the instance created by AuthRepository
-        const { GoogleAuthProvider } = require('firebase/auth');
-        // Since we can't easily access the internal provider instance, we check if the mock was constructed and used.
-        // However, in a real unit test we might export the provider or use a factory.
-        // For TDD purposes here, we check that addScope was called on instances of GoogleAuthProvider
-        // But since `new GoogleAuthProvider()` creates an instance, we need to inspect that instance.
-        // The mock implementation above returns an object with addScope spy.
-
         expect(GoogleAuthProvider).toHaveBeenCalled();
         // Retrieve the instance created
-        const instance = GoogleAuthProvider.mock.results[0].value;
+        const instance = (GoogleAuthProvider as unknown as ReturnType<typeof vi.fn>).mock.results[0].value;
 
         expect(instance.addScope).toHaveBeenCalledWith(
             'https://www.googleapis.com/auth/drive.file'
@@ -74,13 +73,11 @@ describe('AuthRepository', () => {
     });
 
     it('should get current user token', async () => {
-        const { auth } = require('firebase/auth');
         // We need to mock auth.currentUser
         const mockUser = {
             getIdToken: vi.fn().mockResolvedValue('mock-token'),
         };
-        // Re-instantiate with mocked current user support if needed, or just mock the property if possible
-        // Since auth is passed in constructor, we can mock it there.
+        // Re-instantiate with mocked current user support
         const mockAuthWithUser = {
             currentUser: mockUser
         } as unknown as Auth;
@@ -93,13 +90,11 @@ describe('AuthRepository', () => {
     });
 
     it('should handle auth state changes', () => {
-        const { onAuthStateChanged } = require('firebase/auth');
         const callback = vi.fn();
         const unsubscribe = authRepository.onAuthStateChanged(callback);
 
         expect(onAuthStateChanged).toHaveBeenCalled();
-        expect(typeof unsubscribe).toBe('function'); // In mock we should return a fn
-        // Fix mock to return a function
+        expect(typeof unsubscribe).toBe('function');
     });
     // Manually update mock for onAuthStateChanged to return unsubscribe function
 });
