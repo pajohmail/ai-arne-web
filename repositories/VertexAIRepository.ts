@@ -13,7 +13,7 @@ export class VertexAIRepository implements IVertexAIRepository {
             googleAuthOptions: {
                 credentials: {
                     access_token: userToken,
-                },
+                } as any,
             },
         });
 

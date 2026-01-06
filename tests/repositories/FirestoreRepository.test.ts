@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { FirestoreRepository } from '@/repositories/FirestoreRepository';
-import { DesignDocument } from '@/core/models/DesignDocument';
 
 // Mock firebase/firestore
 vi.mock('firebase/firestore', () => {
@@ -46,9 +45,15 @@ describe('FirestoreRepository', () => {
 
         const documentData = {
             userId: 'user-1',
-            title: 'Test Doc',
-            content: { originalBrief: 'brief' },
-            status: 'draft' as const,
+            projectName: 'Test Project',
+            description: 'Test Description',
+            currentPhase: 'analysis' as const,
+            analysis: {
+                useCases: [],
+                domainModelMermaid: '',
+                glossary: [],
+                completed: false
+            },
             createdAt: new Date(),
             updatedAt: new Date()
         };
@@ -66,12 +71,12 @@ describe('FirestoreRepository', () => {
         (getDoc as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
             exists: () => true,
             id: 'doc-1',
-            data: () => ({ userId: 'user-1', title: 'Test Doc' })
+            data: () => ({ userId: 'user-1', projectName: 'Test Project' })
         });
 
         const result = await repo.getDesignDocument('doc-1');
 
-        expect(result).toEqual({ id: 'doc-1', userId: 'user-1', title: 'Test Doc' });
+        expect(result).toEqual({ id: 'doc-1', userId: 'user-1', projectName: 'Test Project' });
     });
 
     it('should return null if design document does not exist', async () => {
@@ -88,9 +93,9 @@ describe('FirestoreRepository', () => {
         const { doc, updateDoc } = await import('firebase/firestore');
         (doc as unknown as ReturnType<typeof vi.fn>).mockReturnValue('mock-doc-ref');
 
-        await repo.updateDesignDocument('doc-1', { title: 'Updated' });
+        await repo.updateDesignDocument('doc-1', { projectName: 'Updated' });
 
-        expect(updateDoc).toHaveBeenCalledWith('mock-doc-ref', { title: 'Updated' });
+        expect(updateDoc).toHaveBeenCalledWith('mock-doc-ref', { projectName: 'Updated' });
     });
 
     it('should delete a design document', async () => {
@@ -106,13 +111,13 @@ describe('FirestoreRepository', () => {
         const { collection, query, where, getDocs } = await import('firebase/firestore');
         (getDocs as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
             docs: [
-                { id: '1', data: () => ({ title: 'Doc 1' }) },
-                { id: '2', data: () => ({ title: 'Doc 2' }) }
+                { id: '1', data: () => ({ projectName: 'Proj 1' }) },
+                { id: '2', data: () => ({ projectName: 'Proj 2' }) }
             ],
             forEach: (callback: (doc: any) => void) => {
                 [
-                    { id: '1', data: () => ({ title: 'Doc 1' }) },
-                    { id: '2', data: () => ({ title: 'Doc 2' }) }
+                    { id: '1', data: () => ({ projectName: 'Proj 1' }) },
+                    { id: '2', data: () => ({ projectName: 'Proj 2' }) }
                 ].forEach(callback);
             }
         });
