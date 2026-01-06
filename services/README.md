@@ -1,45 +1,25 @@
 # Services Layer - Business Logic
 
-## Status: INTERFACES ONLY
+## Status: PARTIALLY IMPLEMENTED
 
-This directory contains interface definitions for the business logic layer.
+This directory contains the business logic layer for the SirenOOP application.
 
-### Defined Interfaces:
-- ✅ `IDesignArchitectService` - Main orchestration service
-- ✅ `IQuestionGeneratorService` - Discovery question generation
-- ✅ `IMermaidGeneratorService` - Diagram generation
+### Implemented Services:
+- ✅ `DesignArchitectService` - Main orchestration service. Manages the 4-phase design workflow (Analysis, System Design, Object Design, Validation).
+- ✅ `DesignPatternAdvisor` - Analyses requirements to suggest appropriate design patterns (GoF, GRASP).
+- ✅ `PromptFactory` - Generates context-aware prompts for the AI (Vertex AI) based on current phase and user input.
 
-### Implementation Status:
-- ❌ **NOT IMPLEMENTED** - These services are defined but not implemented
-- 🔜 **NEXT PHASE** - Another AI agent will implement these
+### Interfaces (Contracts):
+- `IDesignArchitectService`
+- `IQuestionGeneratorService`
+- `IMermaidGeneratorService`
 
-### For Next Developer:
+### Dependencies:
+These services rely on the Repository layer for external communications:
+- `IVertexAIRepository` (AI interactions)
+- `IFirestoreRepository` (Persistence)
+- `IGoogleDriveRepository` (Document storage)
 
-When implementing these services:
-
-1. **Follow TDD** - Write tests first
-2. **Use Repository Interfaces** - Depend on abstractions, not concrete classes
-3. **Single Responsibility** - Each service has one clear purpose
-4. **Dependency Injection** - Constructor injection pattern
-
-Example:
-\`\`\`typescript
-export class QuestionGeneratorService implements IQuestionGeneratorService {
-  constructor(
-    private vertexAIRepo: IVertexAIRepository,
-    private firestoreRepo: IFirestoreRepository
-  ) {}
-
-  async generate(description: string): Promise<Question[]> {
-    // Your implementation here
-  }
-}
-\`\`\`
-
-### Available Repositories (Ready to Use):
-- ✅ `AuthRepository`
-- ✅ `GoogleDriveRepository`
-- ✅ `VertexAIRepository`
-- ✅ `FirestoreRepository`
-
-See `HANDOFF.md` for complete implementation guide.
+### Testing:
+- Unit tests are located in `tests/services/`.
+- Run tests with `npm test`.

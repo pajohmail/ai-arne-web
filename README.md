@@ -1,36 +1,58 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SirenOOP: Guided Object-Oriented System Design
 
-## Getting Started
+SirenOOP is an intelligent, guided workflow tool designed to assist developers and students in creating robust Object-Oriented System Designs. It leverages Google Vertex AI to provide real-time feedback, generate design artifacts (Mermaid diagrams), and validiate architectural decisions.
 
-First, run the development server:
+## 🚀 Features
+
+- **Guided 4-Phase Workflow**:
+  1.  **Analysis Phase**: Requirement gathering, use case definition, and scope analysis.
+  2.  **System Design Phase**: Architecture selection, component identification, and high-level design.
+  3.  **Object Design Phase**: Detailed class design, design pattern application (GoF/GRASP), and relationship mapping.
+  4.  **Validation Phase**: Verification of the design against requirements, ensuring completeness and correctness.
+
+- **AI-Powered Assistance**:
+  - **Design Partner**: Acts as a senior architect pair-programmer.
+  - **Pattern Advisor**: Suggests design patterns based on specific problem contexts.
+  - **Diagram Generation**: Automatically generates Mermaid.js class and sequence diagrams.
+
+- **Persistent Workspaces**: Projects are saved to Firestore, allowing for long-running design sessions.
+
+## 🛠 Tech Stack
+
+- **Frontend**: Next.js 14 (App Router), React, Tailwind CSS
+- **Backend/Services**: TypeScript, Server Actions
+- **AI**: Google Vertex AI (Gemini Pro)
+- **Database**: Firebase Firestore
+- **Storage**: Google Drive Integration
+
+## 🏁 Getting Started
+
+1.  **Clone the repository**
+2.  **Install dependencies**:
+    ```bash
+    npm install
+    ```
+3.  **Configure Environment**:
+    - Ensure your `.env.local` is set up with Firebase and Vertex AI credentials.
+4.  **Run Development Server**:
+    ```bash
+    npm run dev
+    ```
+5.  **Open Browser**: Navigate to `http://localhost:3000`.
+
+## 📂 Project Structure
+
+- `app/`: Next.js App Router pages and layouts.
+- `presentation/`: UI components (Wizards, Phase views).
+- `services/`: Business logic and AI orchestration.
+- `repositories/`: Data access layer (Firestore, Vertex AI).
+- `core/`: Domain models and types.
+- `tests/`: Unit and integration tests.
+
+## 🧪 Testing
+
+Run the test suite with:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm test
 ```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
