@@ -143,6 +143,46 @@ export const AnalysisPhase = ({ document, onUpdate, userToken }: AnalysisPhasePr
                         )}
                     </div>
                 </div>
+                <div className="mt-4 pt-4 border-t">
+                    <button
+                        onClick={async () => {
+                            // 1. Trigger one last analysis to be sure (optional, or just trust current state)
+                            // For speed, let's just transition if we have use cases.
+                            // If we want to be safe, we send a "finalize" message.
+
+                            // Let's assume the user is happy with what's visible in the sidebar.
+                            if (document.analysis?.useCases && document.analysis.useCases.length > 0) {
+                                onUpdate({
+                                    ...document,
+                                    currentPhase: 'systemDesign',
+                                    analysis: { ...document.analysis, completed: true }
+                                });
+                            } else {
+                                // Force an generation pass if empty
+                                // This is a bit tricky without a user message. 
+                                // We'll mock a "finalize" message.
+                                const { analyzeChatAction } = await import('@/app/actions/aiActions');
+                                // Send a hidden system instruction disguised as user input or just a trigger.
+                                const { document: updated, reply } = await analyzeChatAction(document, "Please finalize the Use Cases based on our discussion so far.", userToken!);
+
+                                onUpdate({
+                                    ...updated,
+                                    currentPhase: 'systemDesign',
+                                    analysis: { ...updated.analysis!, completed: true }
+                                });
+                            }
+                        }}
+                        className="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center gap-2 font-semibold shadow-sm transition-colors"
+                    >
+                        <span>🚀 Generate & Continue</span>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                        </svg>
+                    </button>
+                    <p className="text-xs text-center text-gray-500 mt-2">
+                        Click to stop chatting and proceed to System Design with current info.
+                    </p>
+                </div>
             </div>
         </div>
     );

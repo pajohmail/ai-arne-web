@@ -54,10 +54,10 @@ export default function Dashboard() {
 const ProjectDemoWrapper = ({ userId, getIdToken }: { userId: string, getIdToken: () => Promise<string> }) => {
     // In a real app, we would fetch the project list here.
     const [doc, setDoc] = useState<DesignDocument>({
-        id: 'demo-1',
+        id: crypto.randomUUID(),
         userId,
-        projectName: 'Demo Project',
-        description: 'A new project',
+        projectName: 'My New System', // Improved default name
+        description: 'Describe your system here...',
         currentPhase: 'analysis',
         analysis: {
             useCases: [],
@@ -95,9 +95,23 @@ const ProjectDemoWrapper = ({ userId, getIdToken }: { userId: string, getIdToken
 
     return (
         <div>
-            <div className="mb-4 flex justify-between items-center">
-                <h2 className="text-lg font-semibold text-gray-700">Active Project: {doc.projectName}</h2>
-                <span className="text-sm text-gray-500">ID: {doc.id}</span>
+            <div className="mb-4 flex justify-between items-center bg-white p-4 rounded-lg shadow-sm border">
+                <div className="flex items-center gap-2 w-full">
+                    <span className="text-gray-500 font-medium">Project:</span>
+                    <input
+                        type="text"
+                        value={doc.projectName}
+                        onChange={(e) => {
+                            const updated = { ...doc, projectName: e.target.value };
+                            setDoc(updated);
+                            // onUpdate(updated); // Optional: if we want to trigger persistence on every keystroke, but maybe distinct save is better. 
+                            // For now, local state update is enough for the "Export" button to pick it up later.
+                        }}
+                        className="font-semibold text-lg text-gray-800 border-none hover:bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 rounded px-2 py-1 flex-1 transition-colors"
+                        placeholder="Name your project..."
+                    />
+                </div>
+                {/* ID hidden for cleaner UI */}
             </div>
             <ProjectWizard document={doc} onUpdate={handleUpdate} userToken={userToken} />
         </div>
