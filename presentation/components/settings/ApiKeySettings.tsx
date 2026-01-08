@@ -61,7 +61,7 @@ export const ApiKeySettings = () => {
 
             setSavedKey(maskApiKey(apiKey));
             setApiKey('');
-            setMessage({ type: 'success', text: '✓ API key saved! You\'re now using Gemini 3.0' });
+            setMessage({ type: 'success', text: '✓ API key saved! You\'re now using Gemini 3.0 Flash' });
         } catch (error) {
             setMessage({ type: 'error', text: 'Failed to save API key' });
             console.error('Save error:', error);
@@ -98,7 +98,7 @@ export const ApiKeySettings = () => {
         <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-2">AI Model Settings</h2>
             <p className="text-sm text-gray-600 mb-6">
-                Upgrade to Gemini 3.0 by providing your own API key
+                Upgrade to Gemini 3.0 Flash by providing your own API key
             </p>
 
             {/* Current Tier */}
@@ -110,7 +110,7 @@ export const ApiKeySettings = () => {
                         </h3>
                         <p className="text-sm text-gray-600">
                             Model: <span className="font-mono font-semibold">
-                                {savedKey ? 'gemini-3.0-flash' : 'gemini-1.5-flash'}
+                                {savedKey ? 'gemini-3-flash-preview' : 'gemini-1.5-flash'}
                             </span>
                         </p>
                         <p className="text-xs text-gray-500 mt-1">
@@ -171,7 +171,7 @@ export const ApiKeySettings = () => {
                         disabled={isSaving || !apiKey.trim()}
                         className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
                     >
-                        {isSaving ? 'Saving...' : savedKey ? 'Update Key' : 'Save & Upgrade to Gemini 3.0'}
+                        {isSaving ? 'Saving...' : savedKey ? 'Update Key' : 'Save & Upgrade to Pro'}
                     </button>
 
                     {savedKey && (
@@ -192,8 +192,8 @@ export const ApiKeySettings = () => {
                     Why upgrade to Gemini 3.0?
                 </h4>
                 <ul className="text-sm text-blue-800 space-y-1">
+                    <li>✓ Latest Gemini 3 technology</li>
                     <li>✓ Better AI responses and accuracy</li>
-                    <li>✓ Faster processing</li>
                     <li>✓ No shared quota limits</li>
                     <li>✓ You control your own usage and billing</li>
                 </ul>
