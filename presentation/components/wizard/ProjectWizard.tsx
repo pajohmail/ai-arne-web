@@ -6,6 +6,7 @@ import { AnalysisPhase } from '../phases/AnalysisPhase';
 import { SystemDesignPhase } from '../phases/SystemDesignPhase';
 import { ObjectDesignPhase } from '../phases/ObjectDesignPhase';
 import { ValidationPhase } from '../phases/ValidationPhase';
+import { ModelTierBadge } from '../shared/ModelTierBadge';
 
 interface ProjectWizardProps {
     document: DesignDocument;
@@ -29,6 +30,11 @@ export const ProjectWizard = ({ document, onUpdate }: ProjectWizardProps) => {
 
     return (
         <div className="w-full max-w-6xl mx-auto p-6">
+            {/* Model Tier Badge */}
+            <div className="mb-4 flex justify-end">
+                <ModelTierBadge />
+            </div>
+
             {/* Stepper */}
             <div className="mb-8">
                 <div className="flex items-center justify-between relative">

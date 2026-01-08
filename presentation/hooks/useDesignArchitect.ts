@@ -1,18 +1,49 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DesignDocument } from '@/core/models/DesignDocument';
 import { GeminiRepository } from '@/repositories/GeminiRepository';
 import { DesignArchitectService } from '@/services/DesignArchitectService';
 import { config } from '@/config/appConfig';
+import { useAuth } from './useAuth';
 
 export function useDesignArchitect() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<Error | null>(null);
+    const [userApiKey, setUserApiKey] = useState<string | null>(null);
+    const [currentModel, setCurrentModel] = useState<string>(config.gemini.model);
+    const { user } = useAuth();
+
+    // Load user's API key from Firestore
+    useEffect(() => {
+        if (user) {
+            loadUserApiKey();
+        }
+    }, [user]);
+
+    const loadUserApiKey = async () => {
+        try {
+            const { db } = await import('@/config/firebase');
+            const { doc, getDoc } = await import('firebase/firestore');
+            const userDoc = await getDoc(doc(db, 'users', user!.uid));
+            const data = userDoc.data();
+
+            if (data?.geminiApiKey) {
+                setUserApiKey(data.geminiApiKey);
+                setCurrentModel('gemini-3.0-flash'); // Pro tier uses Gemini 3.0
+            } else {
+                setUserApiKey(null);
+                setCurrentModel('gemini-1.5-flash'); // Free tier uses Gemini 1.5
+            }
+        } catch (error) {
+            console.error('Failed to load user API key:', error);
+        }
+    };
 
     const getService = () => {
-        const geminiRepo = new GeminiRepository(
-            config.gemini.apiKey,
-            config.gemini.model
-        );
+        // Use user's key if available (Pro tier), otherwise use default key (Free tier)
+        const apiKey = userApiKey || config.gemini.apiKey;
+        const model = userApiKey ? 'gemini-3.0-flash' : 'gemini-1.5-flash';
+
+        const geminiRepo = new GeminiRepository(apiKey, model);
         return new DesignArchitectService(geminiRepo);
     };
 
@@ -123,6 +154,8 @@ export function useDesignArchitect() {
     return {
         isLoading,
         error,
+        currentModel,
+        isPro: !!userApiKey,
         analyzeChat,
         generateDomainModel,
         generateSystemArchitecture,

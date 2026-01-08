@@ -3,11 +3,13 @@
 import { AuthGuard } from '@/presentation/components/auth/AuthGuard';
 import { useAuth } from '@/presentation/hooks/useAuth';
 import { ProjectWizard } from '@/presentation/components/wizard/ProjectWizard';
+import { ApiKeySettings } from '@/presentation/components/settings/ApiKeySettings';
 import { DesignDocument } from '@/core/models/DesignDocument';
 import { useState, useEffect } from 'react';
 
 export default function Dashboard() {
     const { user, signOut } = useAuth();
+    const [showSettings, setShowSettings] = useState(false);
 
     return (
         <AuthGuard>
@@ -19,6 +21,12 @@ export default function Dashboard() {
                                 <h1 className="text-xl font-bold text-gray-900">SirenOOP Dashboard</h1>
                             </div>
                             <div className="flex items-center gap-4">
+                                <button
+                                    onClick={() => setShowSettings(!showSettings)}
+                                    className="px-4 py-2 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                                >
+                                    ⚙️ Settings
+                                </button>
                                 <span className="text-sm text-gray-600">
                                     {user?.displayName}
                                 </span>
@@ -42,8 +50,19 @@ export default function Dashboard() {
 
                 <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
                     <div className="px-4 py-6 sm:px-0">
-                        {/* Temporary Demo State Initialization */}
-                        <ProjectDemoWrapper userId={user?.uid || 'anon'} />
+                        {showSettings ? (
+                            <div className="max-w-2xl mx-auto">
+                                <button
+                                    onClick={() => setShowSettings(false)}
+                                    className="mb-4 text-sm text-blue-600 hover:text-blue-800 flex items-center gap-2"
+                                >
+                                    ← Back to Dashboard
+                                </button>
+                                <ApiKeySettings />
+                            </div>
+                        ) : (
+                            <ProjectDemoWrapper userId={user?.uid || 'anon'} />
+                        )}
                     </div>
                 </main>
             </div>
