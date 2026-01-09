@@ -33,23 +33,26 @@ const EnvSchema = z.object({
 
 /**
  * Validates environment variables
- * @throws ConfigurationError if validation fails (except in test mode)
+ * @throws ConfigurationError if validation fails (except in test/build mode)
  */
 function validateEnv() {
-    // In test environment, use defaults to avoid breaking tests
+    // In test or build environment, use defaults to avoid breaking tests/builds
     const isTest = process.env.NODE_ENV === 'test' || process.env.VITEST;
+    const isBuild = process.env.NODE_ENV === 'production' && typeof window === 'undefined';
+
+    const usePlaceholders = isTest || isBuild;
 
     try {
         return EnvSchema.parse({
-            NEXT_PUBLIC_FIREBASE_API_KEY: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || (isTest ? 'test-api-key' : undefined),
-            NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || (isTest ? 'test.firebaseapp.com' : undefined),
-            NEXT_PUBLIC_FIREBASE_PROJECT_ID: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || (isTest ? 'test-project' : undefined),
-            NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || (isTest ? 'test.appspot.com' : undefined),
-            NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || (isTest ? '123456' : undefined),
-            NEXT_PUBLIC_FIREBASE_APP_ID: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || (isTest ? 'test-app-id' : undefined),
-            NEXT_PUBLIC_GOOGLE_CLOUD_PROJECT_ID: process.env.NEXT_PUBLIC_GOOGLE_CLOUD_PROJECT_ID || (isTest ? 'test-project' : undefined),
+            NEXT_PUBLIC_FIREBASE_API_KEY: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || (usePlaceholders ? 'build-api-key' : undefined),
+            NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || (usePlaceholders ? 'build.firebaseapp.com' : undefined),
+            NEXT_PUBLIC_FIREBASE_PROJECT_ID: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || (usePlaceholders ? 'build-project' : undefined),
+            NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || (usePlaceholders ? 'build.appspot.com' : undefined),
+            NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || (usePlaceholders ? '123456' : undefined),
+            NEXT_PUBLIC_FIREBASE_APP_ID: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || (usePlaceholders ? 'build-app-id' : undefined),
+            NEXT_PUBLIC_GOOGLE_CLOUD_PROJECT_ID: process.env.NEXT_PUBLIC_GOOGLE_CLOUD_PROJECT_ID || (usePlaceholders ? 'build-project' : undefined),
             NEXT_PUBLIC_GOOGLE_CLOUD_LOCATION: process.env.NEXT_PUBLIC_GOOGLE_CLOUD_LOCATION || 'europe-north1',
-            NEXT_PUBLIC_GEMINI_API_KEY: process.env.NEXT_PUBLIC_GEMINI_API_KEY || (isTest ? 'test-gemini-key' : undefined),
+            NEXT_PUBLIC_GEMINI_API_KEY: process.env.NEXT_PUBLIC_GEMINI_API_KEY || (usePlaceholders ? 'build-gemini-key' : undefined),
             NEXT_PUBLIC_GEMINI_MODEL: process.env.NEXT_PUBLIC_GEMINI_MODEL || 'gemini-2.0-flash-exp',
             NEXT_PUBLIC_GEMINI_TEMPERATURE: process.env.NEXT_PUBLIC_GEMINI_TEMPERATURE || '0.7',
             NEXT_PUBLIC_GEMINI_MAX_TOKENS: process.env.NEXT_PUBLIC_GEMINI_MAX_TOKENS || '2048',

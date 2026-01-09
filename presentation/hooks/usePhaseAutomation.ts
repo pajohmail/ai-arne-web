@@ -29,11 +29,11 @@ export function usePhaseAutomation() {
 
         try {
             // Phase 2: System Design
-            let updatedDoc = { ...document, currentPhase: 'systemDesign' as const };
+            let updatedDoc: DesignDocument = { ...document, currentPhase: 'systemDesign' as const };
             onUpdate(updatedDoc);
 
-            updatedDoc = await generateSystemArchitecture(updatedDoc);
-            updatedDoc.systemDesign!.completed = true;
+            const systemDesignDoc = await generateSystemArchitecture(updatedDoc);
+            updatedDoc = { ...systemDesignDoc, systemDesign: { ...systemDesignDoc.systemDesign!, completed: true } };
             onUpdate(updatedDoc);
 
             // Phase 3: Object Design
@@ -41,8 +41,8 @@ export function usePhaseAutomation() {
             updatedDoc = { ...updatedDoc, currentPhase: 'objectDesign' as const };
             onUpdate(updatedDoc);
 
-            updatedDoc = await generateObjectDesign(updatedDoc);
-            updatedDoc.objectDesign!.completed = true;
+            const objectDesignDoc = await generateObjectDesign(updatedDoc);
+            updatedDoc = { ...objectDesignDoc, objectDesign: { ...objectDesignDoc.objectDesign!, completed: true } };
             onUpdate(updatedDoc);
 
             // Phase 4: Validation
@@ -50,7 +50,8 @@ export function usePhaseAutomation() {
             updatedDoc = { ...updatedDoc, currentPhase: 'validation' as const };
             onUpdate(updatedDoc);
 
-            updatedDoc = await validateDesign(updatedDoc);
+            const validationDoc = await validateDesign(updatedDoc);
+            updatedDoc = validationDoc;
             onUpdate(updatedDoc);
 
             // Complete
