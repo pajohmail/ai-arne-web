@@ -13,6 +13,39 @@ export const ChatAnalysisResponseSchema = z.object({
 export type ValidatedChatAnalysisResponse = z.infer<typeof ChatAnalysisResponseSchema>;
 
 /**
+ * Schema for requirements specification AI response
+ */
+export const RequirementsAnalysisResponseSchema = z.object({
+    reply: z.string().min(1, 'AI reply is required'),
+    projectPurpose: z.string().optional(),
+    stakeholders: z.array(z.object({
+        id: z.string(),
+        name: z.string(),
+        role: z.string(),
+        interests: z.array(z.string())
+    })).optional(),
+    constraints: z.array(z.object({
+        id: z.string(),
+        type: z.enum(['technical', 'business', 'regulatory', 'schedule']),
+        description: z.string()
+    })).optional(),
+    functionalRequirements: z.array(z.object({
+        id: z.string(),
+        title: z.string(),
+        description: z.string(),
+        priority: z.enum(['high', 'medium', 'low'])
+    })).optional(),
+    qualityRequirements: z.array(z.object({
+        id: z.string(),
+        category: z.enum(['performance', 'security', 'usability', 'maintainability', 'reliability']),
+        description: z.string(),
+        metric: z.string().optional()
+    })).optional()
+});
+
+export type ValidatedRequirementsAnalysisResponse = z.infer<typeof RequirementsAnalysisResponseSchema>;
+
+/**
  * Schema for Mermaid diagram responses
  * Validates that the response starts with a valid Mermaid diagram type
  */

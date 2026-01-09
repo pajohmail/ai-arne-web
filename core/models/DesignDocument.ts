@@ -1,4 +1,5 @@
 export type ProjectPhase =
+    | 'requirementsSpec'
     | 'analysis'
     | 'systemDesign'
     | 'objectDesign'
@@ -10,6 +11,9 @@ export interface DesignDocument {
     projectName: string;
     description: string;
     currentPhase: ProjectPhase;
+
+    // Phase 0: Requirements Specification
+    requirementsSpec?: RequirementsSpecification;
 
     // Phase 1: Analysis
     analysis?: {
@@ -82,4 +86,40 @@ export interface Question {
 export interface Answer {
     questionId: number;
     selectedOptions: string[];
+}
+
+export interface RequirementsSpecification {
+    projectPurpose: string;
+    stakeholders: Stakeholder[];
+    constraints: Constraint[];
+    functionalRequirements: FunctionalRequirement[];
+    qualityRequirements: QualityRequirement[];
+    completed: boolean;
+}
+
+export interface Stakeholder {
+    id: string;
+    name: string;
+    role: string;
+    interests: string[];
+}
+
+export interface Constraint {
+    id: string;
+    type: 'technical' | 'business' | 'regulatory' | 'schedule';
+    description: string;
+}
+
+export interface FunctionalRequirement {
+    id: string;
+    title: string;
+    description: string;
+    priority: 'high' | 'medium' | 'low';
+}
+
+export interface QualityRequirement {
+    id: string;
+    category: 'performance' | 'security' | 'usability' | 'maintainability' | 'reliability';
+    description: string;
+    metric?: string;
 }

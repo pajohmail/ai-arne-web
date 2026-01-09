@@ -2,11 +2,13 @@
 
 
 import { DesignDocument, ProjectPhase } from '@/core/models/DesignDocument';
+import { RequirementsSpecPhase } from '../phases/RequirementsSpecPhase';
 import { AnalysisPhase } from '../phases/AnalysisPhase';
 import { SystemDesignPhase } from '../phases/SystemDesignPhase';
 import { ObjectDesignPhase } from '../phases/ObjectDesignPhase';
 import { ValidationPhase } from '../phases/ValidationPhase';
 import { ModelTierBadge } from '../shared/ModelTierBadge';
+import { usePhaseAutomation } from '@/presentation/hooks/usePhaseAutomation';
 
 interface ProjectWizardProps {
     document: DesignDocument;
@@ -14,14 +16,16 @@ interface ProjectWizardProps {
 }
 
 const steps: { id: ProjectPhase; label: string }[] = [
-    { id: 'analysis', label: '1. Analysis' },
-    { id: 'systemDesign', label: '2. System Design' },
-    { id: 'objectDesign', label: '3. Object Design' },
-    { id: 'validation', label: '4. Validation' },
+    { id: 'requirementsSpec', label: '1. Requirements' },
+    { id: 'analysis', label: '2. Analysis' },
+    { id: 'systemDesign', label: '3. System Design' },
+    { id: 'objectDesign', label: '4. Object Design' },
+    { id: 'validation', label: '5. Validation' },
 ];
 
 export const ProjectWizard = ({ document, onUpdate }: ProjectWizardProps) => {
     const currentStepIndex = steps.findIndex((s) => s.id === document.currentPhase);
+    const { automationState } = usePhaseAutomation();
 
     const handlePhaseChange = (phase: ProjectPhase) => {
         // In a real app, perform validation before switching
@@ -42,26 +46,36 @@ export const ProjectWizard = ({ document, onUpdate }: ProjectWizardProps) => {
                     {steps.map((step, index) => {
                         const isCompleted = index < currentStepIndex;
                         const isCurrent = index === currentStepIndex;
+                        const isAutoRunning = automationState.isRunning &&
+                            step.id === automationState.currentAutoPhase;
 
                         return (
                             <div key={step.id} className="flex flex-col items-center bg-white px-2">
                                 <div
                                     className={`w-10 h-10 rounded-full flex items-center justify-center font-bold border-2 transition-colors ${isCompleted
                                         ? 'bg-blue-600 border-blue-600 text-white'
-                                        : isCurrent
+                                        : isCurrent || isAutoRunning
                                             ? 'bg-white border-blue-600 text-blue-600'
                                             : 'bg-white border-gray-300 text-gray-400'
                                         }`}
                                 >
-                                    {index + 1}
+                                    {isAutoRunning ? (
+                                        <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                    ) : (
+                                        index + 1
+                                    )}
                                 </div>
                                 <span
-                                    className={`mt-2 text-sm font-medium ${isCurrent ? 'text-blue-600' : 'text-gray-500'
+                                    className={`mt-2 text-sm font-medium ${isCurrent || isAutoRunning ? 'text-blue-600' : 'text-gray-500'
                                         }`}
                                 >
                                     {step.label}
                                 </span>
                                 {isCompleted && <span className="text-xs text-green-500 mt-1">✓ Done</span>}
+                                {isAutoRunning && <span className="text-xs text-blue-500 mt-1 animate-pulse">Running...</span>}
                             </div>
                         );
                     })}
@@ -70,6 +84,9 @@ export const ProjectWizard = ({ document, onUpdate }: ProjectWizardProps) => {
 
             {/* Phase Content */}
             <div className="bg-white rounded-xl shadow-lg border border-gray-100 min-h-[600px] p-6">
+                {document.currentPhase === 'requirementsSpec' && (
+                    <RequirementsSpecPhase document={document} onUpdate={onUpdate} />
+                )}
                 {document.currentPhase === 'analysis' && (
                     <AnalysisPhase document={document} onUpdate={onUpdate} />
                 )}
@@ -87,20 +104,45 @@ export const ProjectWizard = ({ document, onUpdate }: ProjectWizardProps) => {
             {/* Navigation / Debug Controls */}
             <div className="mt-6 flex justify-between">
                 <button
-                    disabled={currentStepIndex === 0}
+                    disabled={currentStepIndex === 0 || automationState.isRunning}
                     onClick={() => handlePhaseChange(steps[currentStepIndex - 1].id)}
-                    className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50"
+                    className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     Previous
                 </button>
                 <button
-                    disabled={currentStepIndex === steps.length - 1}
+                    disabled={currentStepIndex === steps.length - 1 || automationState.isRunning}
                     onClick={() => handlePhaseChange(steps[currentStepIndex + 1].id)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     Next Phase (Debug)
                 </button>
             </div>
+
+            {/* Automation Status */}
+            {automationState.isRunning && (
+                <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center gap-3">
+                        <svg className="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <div>
+                            <p className="text-sm font-semibold text-blue-900">Automation in Progress</p>
+                            <p className="text-xs text-blue-700">
+                                Currently generating: {automationState.currentAutoPhase}. Please wait...
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {automationState.error && (
+                <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-sm font-semibold text-red-900">Automation Error</p>
+                    <p className="text-xs text-red-700 mt-1">{automationState.error.message}</p>
+                </div>
+            )}
         </div>
     );
 };

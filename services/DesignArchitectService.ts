@@ -3,11 +3,12 @@ import { IVertexAIRepository } from "@/repositories/interfaces/IVertexAIReposito
 import { PromptFactory } from "./PromptFactory";
 import { ValidationError } from "@/core/errors/ApplicationErrors";
 import { handleError } from "@/core/utils/errorHandler";
-import { ChatAnalysisResponseSchema, MermaidCodeSchema } from "@/core/schemas/AIResponseSchemas";
+import { ChatAnalysisResponseSchema, MermaidCodeSchema, RequirementsAnalysisResponseSchema } from "@/core/schemas/AIResponseSchemas";
 import { z } from 'zod';
 
 export interface IDesignArchitectService {
     startAnalysis(projectId: string, initialDescription: string): Promise<DesignDocument>;
+    analyzeRequirementsChat(document: DesignDocument, chatLog: string): Promise<{ document: DesignDocument, reply: string }>;
     analyzeChat(document: DesignDocument, chatLog: string): Promise<{ document: DesignDocument, reply: string }>;
     generateDomainModel(document: DesignDocument): Promise<DesignDocument>;
     startSystemDesign(document: DesignDocument): Promise<DesignDocument>;
@@ -27,17 +28,61 @@ export class DesignArchitectService implements IDesignArchitectService {
             userId: 'current-user-id', // Should be injected or passed
             projectName: projectId,
             description: initialDescription,
-            currentPhase: 'analysis',
-            analysis: {
-                useCases: [],
-                domainModelMermaid: '',
-                glossary: [],
+            currentPhase: 'requirementsSpec',
+            requirementsSpec: {
+                projectPurpose: '',
+                stakeholders: [],
+                constraints: [],
+                functionalRequirements: [],
+                qualityRequirements: [],
                 completed: false
             },
             createdAt: new Date(),
             updatedAt: new Date()
         };
         return doc;
+    }
+
+    async analyzeRequirementsChat(document: DesignDocument, chatLog: string): Promise<{ document: DesignDocument, reply: string }> {
+        if (!document.requirementsSpec) {
+            throw new ValidationError("Requirements phase not initialized", {
+                documentId: document.id,
+                currentPhase: document.currentPhase
+            });
+        }
+
+        const prompt = PromptFactory.createRequirementsExtractionPrompt(chatLog);
+        const result = await this.vertexRepo.generateText(prompt);
+
+        let reply = "I've updated the requirements specification.";
+
+        try {
+            const cleanJson = result.replace(/```json/g, '').replace(/```/g, '').trim();
+            const parsed = JSON.parse(cleanJson);
+            const validated = RequirementsAnalysisResponseSchema.parse(parsed);
+
+            // Merge/update requirements data
+            document.requirementsSpec.projectPurpose = validated.projectPurpose || document.requirementsSpec.projectPurpose;
+            document.requirementsSpec.stakeholders = validated.stakeholders || document.requirementsSpec.stakeholders;
+            document.requirementsSpec.constraints = validated.constraints || document.requirementsSpec.constraints;
+            document.requirementsSpec.functionalRequirements = validated.functionalRequirements || document.requirementsSpec.functionalRequirements;
+            document.requirementsSpec.qualityRequirements = validated.qualityRequirements || document.requirementsSpec.qualityRequirements;
+
+            reply = validated.reply;
+            document.updatedAt = new Date();
+        } catch (error) {
+            if (error instanceof z.ZodError) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const zodError = error as any;
+                const errors = zodError.errors.map((e: any) => e.message).join(", ");
+                throw new ValidationError(`Requirements are invalid: ${errors}`);
+            }
+            const appError = handleError(error);
+            console.error("Failed to parse AI response", appError);
+            reply = "I had trouble processing the requirements, but I'm still listening.";
+        }
+
+        return { document, reply };
     }
 
     async analyzeChat(document: DesignDocument, chatLog: string): Promise<{ document: DesignDocument, reply: string }> {
@@ -48,7 +93,22 @@ export class DesignArchitectService implements IDesignArchitectService {
             });
         }
 
-        const prompt = PromptFactory.createUseCaseExtractionPrompt(chatLog);
+        // Build requirements context string
+        let requirementsContext = '';
+        if (document.requirementsSpec) {
+            const req = document.requirementsSpec;
+            requirementsContext = `
+Purpose: ${req.projectPurpose}
+
+Functional Requirements:
+${req.functionalRequirements?.map(fr => `- ${fr.title} (${fr.priority}): ${fr.description}`).join('\n')}
+
+Quality Requirements:
+${req.qualityRequirements?.map(qr => `- ${qr.category}: ${qr.description}`).join('\n')}
+            `.trim();
+        }
+
+        const prompt = PromptFactory.createUseCaseExtractionPrompt(chatLog, requirementsContext);
         const result = await this.vertexRepo.generateText(prompt);
 
         let reply = "I've updated the analysis.";

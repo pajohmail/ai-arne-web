@@ -1,16 +1,64 @@
 import { UseCase } from "@/core/models/DesignDocument";
 
 export class PromptFactory {
+    // Phase 0: Requirements Specification
+    static createRequirementsExtractionPrompt(chatLog: string): string {
+        return `
+        You are an expert software requirements analyst using the Volere requirements template methodology.
+        Analyze the conversation and extract/update requirements specification information.
+
+        INSTRUCTIONS:
+        1. Act professionally and help the user define complete requirements.
+        2. IMPORTANT: ADAPT TO THE USER'S LANGUAGE.
+        3. Be PROACTIVE: Ask leading questions to gather missing information:
+           - "What is the main business purpose of this system?"
+           - "Who are the primary users? Any secondary stakeholders?"
+           - "Are there any technical constraints (technology, platform, integration)?"
+           - "What are the key functional requirements?"
+           - "What quality attributes matter most (performance, security, usability)?"
+        4. When you have solid baseline requirements, PROPOSE moving to Analysis phase.
+        5. Extract and structure requirements following the Volere template.
+
+        Return JSON with this structure:
+        {
+            "reply": "Your conversational response...",
+            "projectPurpose": "Brief statement of project purpose",
+            "stakeholders": [
+                { "id": "...", "name": "...", "role": "...", "interests": ["..."] }
+            ],
+            "constraints": [
+                { "id": "...", "type": "technical|business|regulatory|schedule", "description": "..." }
+            ],
+            "functionalRequirements": [
+                { "id": "...", "title": "...", "description": "...", "priority": "high|medium|low" }
+            ],
+            "qualityRequirements": [
+                { "id": "...", "category": "performance|security|usability|maintainability|reliability", "description": "...", "metric": "..." }
+            ]
+        }
+
+        Chat Log:
+        ${chatLog}
+        `;
+    }
+
     // Phase 1: Analysis
-    static createUseCaseExtractionPrompt(chatLog: string): string {
+    static createUseCaseExtractionPrompt(chatLog: string, requirements?: string): string {
+        const requirementsContext = requirements
+            ? `\n\nREQUIREMENTS CONTEXT:\nThe following requirements were defined in the Requirements Specification phase:\n${requirements}\n\nUse these requirements to guide your use case identification.\n`
+            : '';
+
         return `
         Analyze the following conversation about a software system.
+        ${requirementsContext}
+        Focus on identifying USE CASES that fulfill the requirements.
+
         1. Act as an expert software architect. Provide a helpful, concise response.
         2. IMPORTANTE: ADAPT TO THE USER'S LANGUAGE.
         3. CRITICAL: Be PROACTIVE and DRIVE the conversation forward. Instead of open-ended questions, ask LEADING questions (e.g., "Shall we include a dashboard for admins?", "I assume users need a login, correct?").
         4. When you have a solid baseline, explicitly PROPOSE moving to the 'System Design' phase.
         5. Extract any new Use Cases or update existing ones based on the conversation.
-        
+
         Return the result as a JSON object with the following structure:
         {
             "reply": "Your conversational response here...",
@@ -18,7 +66,7 @@ export class PromptFactory {
                 { "id": "...", "title": "...", "narrative": "...", "actors": ["..."] }
             ]
         }
-        
+
         Chat Log:
         ${chatLog}
         `;

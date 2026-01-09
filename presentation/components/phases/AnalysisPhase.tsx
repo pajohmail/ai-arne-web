@@ -4,6 +4,7 @@ import { DesignDocument } from '@/core/models/DesignDocument';
 import { useState } from 'react';
 import { MermaidRenderer } from '../shared/MermaidRenderer';
 import { useDesignArchitect } from '@/presentation/hooks/useDesignArchitect';
+import { usePhaseAutomation } from '@/presentation/hooks/usePhaseAutomation';
 
 interface AnalysisPhaseProps {
     document: DesignDocument;
@@ -16,6 +17,7 @@ export const AnalysisPhase = ({ document, onUpdate }: AnalysisPhaseProps) => {
         { role: 'ai', content: 'Hello! Tell me about the system you want to build. Who are the users and what are their goals?' }
     ]);
     const { analyzeChat } = useDesignArchitect();
+    const { runAutomatedPhases, automationState } = usePhaseAutomation();
 
     const handleSendMessage = async () => {
         if (!chatInput.trim()) return;
@@ -129,31 +131,58 @@ export const AnalysisPhase = ({ document, onUpdate }: AnalysisPhaseProps) => {
                 <div className="mt-4 pt-4 border-t">
                     <button
                         onClick={async () => {
-                            if (document.analysis?.useCases && document.analysis.useCases.length > 0) {
-                                onUpdate({
-                                    ...document,
-                                    currentPhase: 'systemDesign',
-                                    analysis: { ...document.analysis, completed: true }
-                                });
-                            } else {
-                                const { document: updated } = await analyzeChat(document, "Please finalize the Use Cases based on our discussion so far.");
+                            try {
+                                // Finalize analysis if needed
+                                let finalizedDoc = document;
+                                if (!document.analysis?.useCases || document.analysis.useCases.length === 0) {
+                                    const { document: updated } = await analyzeChat(
+                                        document,
+                                        "Please finalize the Use Cases based on our discussion so far."
+                                    );
+                                    finalizedDoc = updated;
+                                }
 
-                                onUpdate({
-                                    ...updated,
-                                    currentPhase: 'systemDesign',
-                                    analysis: { ...updated.analysis!, completed: true }
-                                });
+                                // Mark analysis complete
+                                finalizedDoc = {
+                                    ...finalizedDoc,
+                                    analysis: { ...finalizedDoc.analysis!, completed: true }
+                                };
+
+                                // Trigger automation
+                                await runAutomatedPhases(finalizedDoc, onUpdate);
+
+                            } catch (error) {
+                                console.error('Automation failed:', error);
                             }
                         }}
-                        className="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center gap-2 font-semibold shadow-sm transition-colors"
+                        disabled={automationState.isRunning}
+                        className={`w-full py-3 rounded-lg flex items-center justify-center gap-2 font-semibold shadow-sm transition-colors ${automationState.isRunning
+                                ? 'bg-gray-400 cursor-not-allowed'
+                                : 'bg-green-600 hover:bg-green-700 text-white'
+                            }`}
                     >
-                        <span>Generate & Continue</span>
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                        </svg>
+                        {automationState.isRunning ? (
+                            <>
+                                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                <span>Running Automation...</span>
+                            </>
+                        ) : (
+                            <>
+                                <span>Generate & Auto-Complete Design</span>
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                                </svg>
+                            </>
+                        )}
                     </button>
                     <p className="text-xs text-center text-gray-500 mt-2">
-                        Click to stop chatting and proceed to System Design with current info.
+                        {automationState.isRunning
+                            ? `Automatically generating ${automationState.currentAutoPhase}...`
+                            : 'Click to finalize analysis and auto-generate all remaining phases.'
+                        }
                     </p>
                 </div>
             </div>
