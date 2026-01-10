@@ -2,13 +2,13 @@ import {
     Firestore,
     doc,
     getDoc,
+    setDoc,
     updateDoc,
     deleteDoc,
     collection,
     query,
     where,
     getDocs,
-    addDoc,
 } from 'firebase/firestore';
 import { IFirestoreRepository } from './interfaces/IFirestoreRepository';
 import { DesignDocument } from '@/core/models/DesignDocument';
@@ -16,11 +16,14 @@ import { DesignDocument } from '@/core/models/DesignDocument';
 export class FirestoreRepository implements IFirestoreRepository {
     constructor(private db: Firestore) { }
 
-    async saveDesignDocument(documentData: Omit<DesignDocument, 'id'>): Promise<string> {
+    async saveDesignDocument(documentData: DesignDocument): Promise<string> {
         try {
-            const collectionRef = collection(this.db, 'designDocuments');
-            const docRef = await addDoc(collectionRef, documentData);
-            return docRef.id;
+            const { id, ...data } = documentData;
+            const docRef = doc(this.db, 'designDocuments', id);
+
+            // Use setDoc with merge to create or update
+            await setDoc(docRef, data, { merge: true });
+            return id;
         } catch (error: any) {
             throw new Error(`Failed to save document: ${error.message}`);
         }
