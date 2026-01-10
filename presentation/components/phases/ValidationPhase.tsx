@@ -44,6 +44,19 @@ export const ValidationPhase = ({ document, onUpdate }: PhaseProps) => {
         }
     };
 
+    const handleDownload = () => {
+        if (!report) return;
+        const blob = new Blob([report], { type: 'text/markdown' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = \`\${document.projectName || 'design-document'}.md\`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
     // Find the latest AI review
     const aiReview = document.validation?.reviews.find(r => r.author === 'AI Validator');
 
@@ -80,14 +93,24 @@ export const ValidationPhase = ({ document, onUpdate }: PhaseProps) => {
             <div className="flex flex-col border rounded-lg bg-white overflow-hidden shadow-sm">
                 <div className="p-4 border-b bg-gray-50 flex justify-between items-center">
                     <h3 className="font-bold text-gray-700">2. Final Report</h3>
-                    <button
-                        onClick={handleExport}
-                        disabled={isExporting}
-                        className={`px-4 py-2 rounded text-white text-sm font-medium ${isExporting ? 'bg-gray-400' : 'bg-green-600 hover:bg-green-700'
-                            }`}
-                    >
-                        {isExporting ? 'Generating...' : 'Generate Report'}
-                    </button>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={handleExport}
+                            disabled={isExporting}
+                            className={`px-4 py-2 rounded text-white text-sm font-medium ${isExporting ? 'bg-gray-400' : 'bg-green-600 hover:bg-green-700'
+                                }`}
+                        >
+                            {isExporting ? 'Generating...' : 'Generate Report'}
+                        </button>
+                        {report && (
+                            <button
+                                onClick={handleDownload}
+                                className="px-4 py-2 rounded text-white text-sm font-medium bg-blue-600 hover:bg-blue-700"
+                            >
+                                Download
+                            </button>
+                        )}
+                    </div>
                 </div>
                 <div className="flex-1 p-4 overflow-auto bg-gray-50/30">
                     {error && <div className="mb-4 text-red-600 text-sm bg-red-50 p-2 rounded">{error}</div>}
@@ -100,7 +123,7 @@ export const ValidationPhase = ({ document, onUpdate }: PhaseProps) => {
                                 className="flex-1 w-full p-3 border rounded text-xs font-mono text-gray-700 mb-2 focus:ring-2 focus:ring-green-500 outline-none"
                             />
                             <p className="text-xs text-center text-gray-500">
-                                Copy the markdown above to create your README.md or documentation.
+                                Copy the markdown above or click Download to save it to your computer.
                             </p>
                         </div>
                     ) : (
