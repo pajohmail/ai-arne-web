@@ -71,71 +71,104 @@ export default function Dashboard() {
 }
 
 const ProjectDemoWrapper = ({ userId }: { userId: string }) => {
-    // In a real app, we would fetch the project list here.
-    const [doc, setDoc] = useState<DesignDocument>({
-        id: crypto.randomUUID(),
-        userId,
-        projectName: 'My New System', // Improved default name
-        description: 'Describe your system here...',
-        currentPhase: 'analysis',
-        analysis: {
-            useCases: [],
-            domainModelMermaid: '',
-            glossary: [],
-            completed: false
-        },
-        createdAt: new Date(),
-        updatedAt: new Date()
-    });
-
+    const [projects, setProjects] = useState<DesignDocument[]>([]);
+    const [selectedProject, setSelectedProject] = useState<DesignDocument | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
 
-    // Load existing document on mount
+    // Load all projects on mount
     useEffect(() => {
-        const loadDocument = async () => {
-            if (userId === 'anon') {
-                setIsLoading(false);
-                return;
-            }
-
-            try {
-                const { db } = await import('@/config/firebase');
-                const { FirestoreRepository } = await import('@/repositories/FirestoreRepository');
-                const repo = new FirestoreRepository(db);
-
-                // Try to load user's documents
-                const docs = await repo.getUserDesignDocuments(userId);
-                if (docs.length > 0) {
-                    // Load the most recent document
-                    const sortedDocs = docs.sort((a, b) =>
-                        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-                    );
-                    setDoc(sortedDocs[0] as DesignDocument);
-                    console.log("Loaded existing document", sortedDocs[0].id);
-                }
-            } catch (error) {
-                console.error("Failed to load document", error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        loadDocument();
+        loadProjects();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [userId]);
 
-    const handleUpdate = async (newDoc: DesignDocument) => {
-        setDoc(newDoc);
+    const loadProjects = async () => {
+        if (userId === 'anon') {
+            setIsLoading(false);
+            return;
+        }
+
         try {
-            // Dynamically import to avoid server-side issues with Firebase Client SDK if any
             const { db } = await import('@/config/firebase');
             const { FirestoreRepository } = await import('@/repositories/FirestoreRepository');
             const repo = new FirestoreRepository(db);
 
-            // Save to Firestore
+            const docs = await repo.getUserDesignDocuments(userId);
+            if (docs.length > 0) {
+                const sortedDocs = docs.sort((a, b) =>
+                    new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+                );
+                setProjects(sortedDocs);
+                setSelectedProject(sortedDocs[0] as DesignDocument);
+                console.log(`Loaded ${docs.length} projects`);
+            }
+        } catch (error) {
+            console.error("Failed to load projects", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const createNewProject = () => {
+        const newProject: DesignDocument = {
+            id: crypto.randomUUID(),
+            userId,
+            projectName: `New Project ${new Date().toLocaleDateString()}`,
+            description: 'Describe your system here...',
+            currentPhase: 'requirementsSpec',
+            requirementsSpec: {
+                projectPurpose: '',
+                stakeholders: [],
+                constraints: [],
+                functionalRequirements: [],
+                qualityRequirements: [],
+                completed: false
+            },
+            createdAt: new Date(),
+            updatedAt: new Date()
+        };
+        setProjects([newProject, ...projects]);
+        setSelectedProject(newProject);
+    };
+
+    const handleUpdate = async (newDoc: DesignDocument) => {
+        setSelectedProject(newDoc);
+
+        // Update in local state
+        setProjects(prev => prev.map(p => p.id === newDoc.id ? newDoc : p));
+
+        try {
+            const { db } = await import('@/config/firebase');
+            const { FirestoreRepository } = await import('@/repositories/FirestoreRepository');
+            const repo = new FirestoreRepository(db);
+
             await repo.saveDesignDocument(newDoc);
             console.log("Document persisted successfully", newDoc.id);
         } catch (e) {
             console.error("Failed to persist document", e);
+        }
+    };
+
+    const handleDelete = async (projectId: string) => {
+        try {
+            const { db } = await import('@/config/firebase');
+            const { FirestoreRepository } = await import('@/repositories/FirestoreRepository');
+            const repo = new FirestoreRepository(db);
+
+            await repo.deleteDesignDocument(projectId);
+
+            const updatedProjects = projects.filter(p => p.id !== projectId);
+            setProjects(updatedProjects);
+
+            // Select another project or null
+            if (selectedProject?.id === projectId) {
+                setSelectedProject(updatedProjects.length > 0 ? updatedProjects[0] : null);
+            }
+
+            setShowDeleteConfirm(null);
+            console.log("Project deleted successfully", projectId);
+        } catch (error) {
+            console.error("Failed to delete project", error);
         }
     };
 
@@ -147,27 +180,168 @@ const ProjectDemoWrapper = ({ userId }: { userId: string }) => {
         );
     }
 
+    // Show project list if no project selected
+    if (!selectedProject) {
+        return (
+            <div className="max-w-4xl mx-auto">
+                <div className="bg-white rounded-lg shadow-lg p-6">
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-2xl font-bold text-gray-800">Your Projects</h2>
+                        <button
+                            onClick={createNewProject}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            </svg>
+                            New Project
+                        </button>
+                    </div>
+
+                    {projects.length === 0 ? (
+                        <div className="text-center py-12">
+                            <p className="text-gray-500 mb-4">No projects yet. Create your first project to get started!</p>
+                            <button
+                                onClick={createNewProject}
+                                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                            >
+                                Create First Project
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            {projects.map(project => (
+                                <div
+                                    key={project.id}
+                                    className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors"
+                                    onClick={() => setSelectedProject(project)}
+                                >
+                                    <div className="flex justify-between items-start">
+                                        <div className="flex-1">
+                                            <h3 className="font-semibold text-lg text-gray-800">{project.projectName}</h3>
+                                            <p className="text-sm text-gray-500 mt-1">{project.description}</p>
+                                            <div className="flex gap-4 mt-2">
+                                                <span className="text-xs text-gray-400">
+                                                    Phase: {project.currentPhase === 'requirementsSpec' ? 'Requirements' :
+                                                           project.currentPhase === 'analysis' ? 'Analysis' : 'Completed'}
+                                                </span>
+                                                <span className="text-xs text-gray-400">
+                                                    Updated: {new Date(project.updatedAt).toLocaleDateString()}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setShowDeleteConfirm(project.id);
+                                            }}
+                                            className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded transition-colors"
+                                        >
+                                            Delete
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {/* Delete Confirmation Dialog */}
+                {showDeleteConfirm && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-lg p-6 max-w-md mx-4">
+                            <h3 className="text-lg font-bold text-gray-900 mb-2">Radera projekt?</h3>
+                            <p className="text-gray-600 mb-6">
+                                Är du säker på att du vill radera detta projekt? Detta går inte att ångra.
+                            </p>
+                            <div className="flex gap-3 justify-end">
+                                <button
+                                    onClick={() => setShowDeleteConfirm(null)}
+                                    className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                                >
+                                    Avbryt
+                                </button>
+                                <button
+                                    onClick={() => handleDelete(showDeleteConfirm)}
+                                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                                >
+                                    Radera
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    }
+
     return (
         <div>
             <div className="mb-4 flex justify-between items-center bg-white p-4 rounded-lg shadow-sm border">
-                <div className="flex items-center gap-2 w-full">
-                    <span className="text-gray-500 font-medium">Project:</span>
-                    <input
-                        type="text"
-                        value={doc.projectName}
-                        onChange={(e) => {
-                            const updated = { ...doc, projectName: e.target.value };
-                            setDoc(updated);
-                            // onUpdate(updated); // Optional: if we want to trigger persistence on every keystroke, but maybe distinct save is better. 
-                            // For now, local state update is enough for the "Export" button to pick it up later.
-                        }}
-                        className="font-semibold text-lg text-gray-800 border-none hover:bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 rounded px-2 py-1 flex-1 transition-colors"
-                        placeholder="Name your project..."
-                    />
+                <div className="flex items-center gap-4 flex-1">
+                    <button
+                        onClick={() => setSelectedProject(null)}
+                        className="text-blue-600 hover:text-blue-800 flex items-center gap-2"
+                    >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
+                        Alla projekt
+                    </button>
+                    <span className="text-gray-300">|</span>
+                    <div className="flex items-center gap-2 flex-1">
+                        <span className="text-gray-500 font-medium">Project:</span>
+                        <input
+                            type="text"
+                            value={selectedProject.projectName}
+                            onChange={(e) => {
+                                const updated = { ...selectedProject, projectName: e.target.value };
+                                setSelectedProject(updated);
+                                handleUpdate(updated);
+                            }}
+                            className="font-semibold text-lg text-gray-800 border-none hover:bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 rounded px-2 py-1 flex-1 transition-colors"
+                            placeholder="Name your project..."
+                        />
+                    </div>
                 </div>
-                {/* ID hidden for cleaner UI */}
+                <button
+                    onClick={() => setShowDeleteConfirm(selectedProject.id)}
+                    className="px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-2"
+                >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Radera projekt
+                </button>
             </div>
-            <ProjectWizard document={doc} onUpdate={handleUpdate} />
+
+            <ProjectWizard document={selectedProject} onUpdate={handleUpdate} />
+
+            {/* Delete Confirmation Dialog */}
+            {showDeleteConfirm && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-6 max-w-md mx-4">
+                        <h3 className="text-lg font-bold text-gray-900 mb-2">Radera projekt?</h3>
+                        <p className="text-gray-600 mb-6">
+                            Är du säker på att du vill radera <strong>{selectedProject.projectName}</strong>? Detta går inte att ångra.
+                        </p>
+                        <div className="flex gap-3 justify-end">
+                            <button
+                                onClick={() => setShowDeleteConfirm(null)}
+                                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                            >
+                                Avbryt
+                            </button>
+                            <button
+                                onClick={() => handleDelete(showDeleteConfirm)}
+                                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                            >
+                                Radera
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
