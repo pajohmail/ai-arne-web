@@ -66,6 +66,25 @@ export function useDesignArchitect() {
         }
     };
 
+    const analyzeTechStackChat = async (
+        document: DesignDocument,
+        chatLog: string
+    ): Promise<{ document: DesignDocument; reply: string }> => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const service = getService();
+            const result = await service.analyzeTechStackChat(document, chatLog);
+            return result;
+        } catch (err) {
+            const error = err instanceof Error ? err : new Error('Failed to analyze tech stack chat');
+            setError(error);
+            throw error;
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const analyzeChat = async (
         document: DesignDocument,
         chatLog: string
@@ -176,6 +195,7 @@ export function useDesignArchitect() {
         currentModel,
         isPro: !!userApiKey,
         analyzeRequirementsChat,
+        analyzeTechStackChat,
         analyzeChat,
         generateDomainModel,
         generateSystemArchitecture,

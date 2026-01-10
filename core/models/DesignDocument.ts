@@ -1,5 +1,6 @@
 export type ProjectPhase =
     | 'requirementsSpec'
+    | 'techStack'
     | 'analysis'
     | 'completed';
 
@@ -13,7 +14,10 @@ export interface DesignDocument {
     // Phase 0: Requirements Specification
     requirementsSpec?: RequirementsSpecification;
 
-    // Phase 1: Analysis
+    // Phase 1: Technology Stack
+    techStack?: TechnologyStack;
+
+    // Phase 2: Analysis
     analysis?: {
         useCases: UseCase[];
         domainModelMermaid: string;
@@ -122,4 +126,20 @@ export interface QualityRequirement {
     category: 'performance' | 'security' | 'usability' | 'maintainability' | 'reliability';
     description: string;
     metric?: string;
+}
+
+export interface TechnologyStack {
+    frontend?: TechChoice;
+    backend?: TechChoice;
+    database?: TechChoice;
+    hosting?: TechChoice;
+    additionalTools?: TechChoice[];
+    reasoning: string;
+    completed: boolean;
+}
+
+export interface TechChoice {
+    name: string;
+    category: string;
+    reasoning: string;
 }

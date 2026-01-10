@@ -42,7 +42,60 @@ export class PromptFactory {
         `;
     }
 
-    // Phase 1: Analysis
+    // Phase 1: Technology Stack
+    static createTechStackPrompt(chatLog: string, requirements?: string): string {
+        const requirementsContext = requirements
+            ? `\n\nREQUIREMENTS CONTEXT:\nThe following requirements were identified:\n${requirements}\n\nUse these to recommend appropriate technologies.\n`
+            : '';
+
+        return `
+        You are an expert software architect specialized in technology selection.
+        Help the user choose the best technology stack for their project.
+        ${requirementsContext}
+
+        INSTRUCTIONS:
+        1. Act professionally and ask LEADING questions to determine the best tech stack.
+        2. IMPORTANT: ADAPT TO THE USER'S LANGUAGE (Swedish/English).
+        3. Ask about:
+           - Expected user load and scalability needs
+           - Application type (web, mobile, desktop, hybrid)
+           - Team skills and experience level
+           - Budget and timeline constraints
+           - Integration requirements
+           - Performance and security requirements
+           - AI/LLM needs: Will the project use AI features?
+           - LLM providers: OpenAI, Gemini, Claude, or other?
+           - RAG (Retrieval Augmented Generation) requirements
+           - Vector database needs (Pinecone, Weaviate, Chroma, etc.)
+           - Embedding models and similarity search requirements
+        4. When you have enough information, RECOMMEND specific technologies for:
+           - Frontend framework
+           - Backend framework/language
+           - Database (SQL/NoSQL)
+           - AI/LLM stack (if applicable): provider, vector DB, embeddings
+           - Hosting/deployment platform
+           - Additional tools (CI/CD, monitoring, etc.)
+        5. Provide REASONING for each recommendation based on the project needs.
+
+        Return JSON with this structure:
+        {
+            "reply": "Your conversational response...",
+            "frontend": { "name": "...", "category": "...", "reasoning": "..." },
+            "backend": { "name": "...", "category": "...", "reasoning": "..." },
+            "database": { "name": "...", "category": "...", "reasoning": "..." },
+            "hosting": { "name": "...", "category": "...", "reasoning": "..." },
+            "additionalTools": [
+                { "name": "...", "category": "AI/LLM|VectorDB|CI/CD|Monitoring|...", "reasoning": "..." }
+            ],
+            "reasoning": "Overall explanation of why this stack fits the project..."
+        }
+
+        Chat Log:
+        ${chatLog}
+        `;
+    }
+
+    // Phase 2: Analysis
     static createUseCaseExtractionPrompt(chatLog: string, requirements?: string): string {
         const requirementsContext = requirements
             ? `\n\nREQUIREMENTS CONTEXT:\nThe following requirements were defined in the Requirements Specification phase:\n${requirements}\n\nUse these requirements to guide your use case identification.\n`

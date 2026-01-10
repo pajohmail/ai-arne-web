@@ -3,6 +3,7 @@
 
 import { DesignDocument, ProjectPhase } from '@/core/models/DesignDocument';
 import { RequirementsSpecPhase } from '../phases/RequirementsSpecPhase';
+import { TechStackPhase } from '../phases/TechStackPhase';
 import { AnalysisPhase } from '../phases/AnalysisPhase';
 import { CompletedPhase } from '../phases/CompletedPhase';
 import { ModelTierBadge } from '../shared/ModelTierBadge';
@@ -16,8 +17,9 @@ interface ProjectWizardProps {
 
 const steps: { id: ProjectPhase; label: string }[] = [
     { id: 'requirementsSpec', label: '1. Requirements' },
-    { id: 'analysis', label: '2. Analysis' },
-    { id: 'completed', label: '3. Completed' },
+    { id: 'techStack', label: '2. Tech Stack' },
+    { id: 'analysis', label: '3. Analysis' },
+    { id: 'completed', label: '4. Completed' },
 ];
 
 export const ProjectWizard = ({ document, onUpdate }: ProjectWizardProps) => {
@@ -92,6 +94,11 @@ export const ProjectWizard = ({ document, onUpdate }: ProjectWizardProps) => {
                 {document.currentPhase === 'requirementsSpec' && (
                     <div className="p-6">
                         <RequirementsSpecPhase document={document} onUpdate={onUpdate} />
+                    </div>
+                )}
+                {document.currentPhase === 'techStack' && (
+                    <div className="p-6">
+                        <TechStackPhase document={document} onUpdate={onUpdate} />
                     </div>
                 )}
                 {document.currentPhase === 'analysis' && (

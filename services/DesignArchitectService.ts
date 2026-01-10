@@ -9,6 +9,7 @@ import { z } from 'zod';
 export interface IDesignArchitectService {
     startAnalysis(projectId: string, initialDescription: string): Promise<DesignDocument>;
     analyzeRequirementsChat(document: DesignDocument, chatLog: string): Promise<{ document: DesignDocument, reply: string }>;
+    analyzeTechStackChat(document: DesignDocument, chatLog: string): Promise<{ document: DesignDocument, reply: string }>;
     analyzeChat(document: DesignDocument, chatLog: string): Promise<{ document: DesignDocument, reply: string }>;
     generateDomainModel(document: DesignDocument): Promise<DesignDocument>;
     startSystemDesign(document: DesignDocument): Promise<DesignDocument>;
@@ -80,6 +81,60 @@ export class DesignArchitectService implements IDesignArchitectService {
             const appError = handleError(error);
             console.error("Failed to parse AI response", appError);
             reply = "I had trouble processing the requirements, but I'm still listening.";
+        }
+
+        return { document, reply };
+    }
+
+    async analyzeTechStackChat(document: DesignDocument, chatLog: string): Promise<{ document: DesignDocument, reply: string }> {
+        if (!document.techStack) {
+            document.techStack = {
+                reasoning: '',
+                completed: false
+            };
+        }
+
+        // Build requirements context
+        let requirementsContext = '';
+        if (document.requirementsSpec) {
+            const req = document.requirementsSpec;
+            requirementsContext = `
+Project Purpose: ${req.projectPurpose}
+
+Functional Requirements:
+${req.functionalRequirements?.map(fr => `- ${fr.title} (${fr.priority}): ${fr.description}`).join('\n')}
+
+Quality Requirements:
+${req.qualityRequirements?.map(qr => `- ${qr.category}: ${qr.description}`).join('\n')}
+
+Constraints:
+${req.constraints?.map(c => `- ${c.type}: ${c.description}`).join('\n')}
+            `.trim();
+        }
+
+        const prompt = PromptFactory.createTechStackPrompt(chatLog, requirementsContext);
+        const result = await this.vertexRepo.generateText(prompt);
+
+        let reply = "Jag har uppdaterat teknologistacken.";
+
+        try {
+            const cleanJson = result.replace(/```json/g, '').replace(/```/g, '').trim();
+            const parsed = JSON.parse(cleanJson);
+
+            // Update tech stack from AI response
+            if (parsed.frontend) document.techStack.frontend = parsed.frontend;
+            if (parsed.backend) document.techStack.backend = parsed.backend;
+            if (parsed.database) document.techStack.database = parsed.database;
+            if (parsed.hosting) document.techStack.hosting = parsed.hosting;
+            if (parsed.additionalTools) document.techStack.additionalTools = parsed.additionalTools;
+            if (parsed.reasoning) document.techStack.reasoning = parsed.reasoning;
+
+            reply = parsed.reply || reply;
+            document.updatedAt = new Date();
+        } catch (error) {
+            const appError = handleError(error);
+            console.error("Failed to parse tech stack AI response", appError);
+            reply = "Jag hade problem att bearbeta informationen, men jag lyssnar fortfarande.";
         }
 
         return { document, reply };
@@ -295,7 +350,87 @@ ${req.qualityRequirements?.map(qr => `- ${qr.category}: ${qr.description}`).join
         let report = `# Design Document: ${document.projectName}\n\n`;
         report += `**Description:** ${document.description}\n\n`;
 
-        report += `## Phase 1: Analysis\n\n`;
+        // Requirements Specification
+        if (document.requirementsSpec) {
+            report += `## Phase 0: Requirements Specification\n\n`;
+            report += `**Project Purpose:** ${document.requirementsSpec.projectPurpose}\n\n`;
+
+            if (document.requirementsSpec.stakeholders.length > 0) {
+                report += `### Stakeholders\n`;
+                document.requirementsSpec.stakeholders.forEach(sh => {
+                    report += `- **${sh.name}** (${sh.role}): ${sh.interests.join(', ')}\n`;
+                });
+                report += `\n`;
+            }
+
+            if (document.requirementsSpec.functionalRequirements.length > 0) {
+                report += `### Functional Requirements\n`;
+                document.requirementsSpec.functionalRequirements.forEach(fr => {
+                    report += `- **${fr.title}** (${fr.priority}): ${fr.description}\n`;
+                });
+                report += `\n`;
+            }
+
+            if (document.requirementsSpec.qualityRequirements.length > 0) {
+                report += `### Quality Requirements\n`;
+                document.requirementsSpec.qualityRequirements.forEach(qr => {
+                    report += `- **${qr.category}**: ${qr.description}${qr.metric ? ` (${qr.metric})` : ''}\n`;
+                });
+                report += `\n`;
+            }
+
+            if (document.requirementsSpec.constraints.length > 0) {
+                report += `### Constraints\n`;
+                document.requirementsSpec.constraints.forEach(c => {
+                    report += `- **${c.type}**: ${c.description}\n`;
+                });
+                report += `\n`;
+            }
+        }
+
+        // Technology Stack
+        if (document.techStack) {
+            report += `## Phase 1: Technology Stack\n\n`;
+            report += `**Overall Reasoning:** ${document.techStack.reasoning}\n\n`;
+
+            if (document.techStack.frontend) {
+                report += `### Frontend\n`;
+                report += `- **Technology:** ${document.techStack.frontend.name}\n`;
+                report += `- **Category:** ${document.techStack.frontend.category}\n`;
+                report += `- **Reasoning:** ${document.techStack.frontend.reasoning}\n\n`;
+            }
+
+            if (document.techStack.backend) {
+                report += `### Backend\n`;
+                report += `- **Technology:** ${document.techStack.backend.name}\n`;
+                report += `- **Category:** ${document.techStack.backend.category}\n`;
+                report += `- **Reasoning:** ${document.techStack.backend.reasoning}\n\n`;
+            }
+
+            if (document.techStack.database) {
+                report += `### Database\n`;
+                report += `- **Technology:** ${document.techStack.database.name}\n`;
+                report += `- **Category:** ${document.techStack.database.category}\n`;
+                report += `- **Reasoning:** ${document.techStack.database.reasoning}\n\n`;
+            }
+
+            if (document.techStack.hosting) {
+                report += `### Hosting\n`;
+                report += `- **Platform:** ${document.techStack.hosting.name}\n`;
+                report += `- **Category:** ${document.techStack.hosting.category}\n`;
+                report += `- **Reasoning:** ${document.techStack.hosting.reasoning}\n\n`;
+            }
+
+            if (document.techStack.additionalTools && document.techStack.additionalTools.length > 0) {
+                report += `### Additional Tools & Services\n`;
+                document.techStack.additionalTools.forEach(tool => {
+                    report += `- **${tool.name}** (${tool.category}): ${tool.reasoning}\n`;
+                });
+                report += `\n`;
+            }
+        }
+
+        report += `## Phase 2: Analysis\n\n`;
         report += `### Use Cases\n`;
         document.analysis?.useCases.forEach(uc => {
             report += `- **${uc.title}**: ${uc.narrative}\n`;
@@ -307,21 +442,21 @@ ${req.qualityRequirements?.map(qr => `- ${qr.category}: ${qr.description}`).join
             report += `**Mermaid Code:**\n\`\`\`mermaid\n${document.analysis.domainModelMermaid}\n\`\`\`\n\n`;
         }
 
-        report += `## Phase 2: System Design\n\n`;
+        report += `## Phase 3: System Design\n\n`;
         if (document.systemDesign?.architectureDiagramMermaid) {
             report += `### Architecture\n\n`;
             report += `**Diagram:**\n![Architecture](${this.getMermaidImageUrl(document.systemDesign.architectureDiagramMermaid)})\n\n`;
             report += `**Mermaid Code:**\n\`\`\`mermaid\n${document.systemDesign.architectureDiagramMermaid}\n\`\`\`\n\n`;
         }
 
-        report += `## Phase 3: Object Design\n\n`;
+        report += `## Phase 4: Object Design\n\n`;
         if (document.objectDesign?.classDiagramMermaid) {
             report += `### Class Diagram\n\n`;
             report += `**Diagram:**\n![Class Diagram](${this.getMermaidImageUrl(document.objectDesign.classDiagramMermaid)})\n\n`;
             report += `**Mermaid Code:**\n\`\`\`mermaid\n${document.objectDesign.classDiagramMermaid}\n\`\`\`\n\n`;
         }
 
-        report += `## Phase 4: Validation\n\n`;
+        report += `## Phase 5: Validation\n\n`;
         const aiReview = document.validation?.reviews.find(r => r.author === 'AI Validator');
         if (aiReview) {
             report += `### AI Traceability Report\n${aiReview.content}\n\n`;
