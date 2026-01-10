@@ -9,7 +9,7 @@ interface PhaseProps {
     onUpdate: (doc: DesignDocument) => void;
 }
 
-export const ValidationPhase = ({ document, onUpdate }: PhaseProps) => {
+export const ValidationPhase = ({ document: designDoc, onUpdate }: PhaseProps) => {
     const [isValidating, setIsValidating] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
     const [report, setReport] = useState<string | null>(null);
@@ -20,7 +20,7 @@ export const ValidationPhase = ({ document, onUpdate }: PhaseProps) => {
         setIsValidating(true);
         setError(null);
         try {
-            const updatedDoc = await validateDesign(document);
+            const updatedDoc = await validateDesign(designDoc);
             onUpdate(updatedDoc);
         } catch (err: unknown) {
             const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
@@ -34,7 +34,7 @@ export const ValidationPhase = ({ document, onUpdate }: PhaseProps) => {
         setIsExporting(true);
         setError(null);
         try {
-            const result = await generateReport(document);
+            const result = await generateReport(designDoc);
             setReport(result);
         } catch (err: unknown) {
             const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
@@ -48,17 +48,17 @@ export const ValidationPhase = ({ document, onUpdate }: PhaseProps) => {
         if (!report) return;
         const blob = new Blob([report], { type: 'text/markdown' });
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
+        const a = window.document.createElement('a');
         a.href = url;
-        a.download = `${document.projectName || 'design-document'}.md`;
-        document.body.appendChild(a);
+        a.download = `${designDoc.projectName || 'design-document'}.md`;
+        window.document.body.appendChild(a);
         a.click();
-        document.body.removeChild(a);
+        window.document.body.removeChild(a);
         URL.revokeObjectURL(url);
     };
 
     // Find the latest AI review
-    const aiReview = document.validation?.reviews.find(r => r.author === 'AI Validator');
+    const aiReview = designDoc.validation?.reviews.find(r => r.author === 'AI Validator');
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 h-full p-6">
