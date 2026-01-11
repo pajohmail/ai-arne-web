@@ -349,4 +349,188 @@ export class PromptFactory {
         }
         `;
     }
+
+    // TIER 2: Algorithm Specifications
+    static createAlgorithmSpecPrompt(
+        operation: string,
+        contract: any,
+        context: string
+    ): string {
+        return `
+        Generate a detailed algorithm specification for this operation.
+
+        OPERATION: ${operation}
+        PURPOSE: ${contract.description || 'Not specified'}
+        PRECONDITIONS: ${JSON.stringify(contract.preConditions || [])}
+        POSTCONDITIONS: ${JSON.stringify(contract.postConditions || [])}
+        CONTEXT: ${context}
+
+        INSTRUCTIONS:
+        1. Write step-by-step pseudocode using standard notation:
+           - IF/ELSE for conditionals
+           - FOR/WHILE for loops
+           - FUNCTION calls
+           - RETURN statements
+           - Variable assignments
+        2. Identify edge cases and how to handle them
+        3. Specify time/space complexity (Big O notation)
+        4. Provide concrete examples with inputs/outputs
+        5. If the algorithm is complex (>10 steps), generate a Mermaid flowchart
+
+        PSEUDOCODE FORMAT:
+        STEP 1: [Description]
+        STEP 2: IF [condition] THEN
+          STEP 2.1: [Action]
+        STEP 3: END IF
+        STEP 4: FOR each [item] in [collection]
+          STEP 4.1: [Action]
+        STEP 5: END FOR
+        STEP 6: RETURN [result]
+
+        Return JSON with this structure:
+        {
+            "operation": "${operation}",
+            "purpose": "Clear description of what this algorithm does",
+            "inputParameters": [
+                {
+                    "name": "paramName",
+                    "type": "string",
+                    "description": "What this parameter represents",
+                    "optional": false
+                }
+            ],
+            "outputType": "Return type (string, number, object, etc.)",
+            "pseudocode": "STEP 1: Initialize...\nSTEP 2: IF ...",
+            "flowChart": "graph TD\n  A[Start] --> B{Condition?}\n  B -->|Yes| C[Action]\n  B -->|No| D[Other Action]",
+            "complexity": {
+                "time": "O(n)",
+                "space": "O(1)",
+                "explanation": "Why this complexity"
+            },
+            "edgeCases": [
+                {
+                    "condition": "Empty input",
+                    "handling": "Return empty result",
+                    "expectedBehavior": "Should not throw error"
+                }
+            ],
+            "examples": [
+                {
+                    "input": {"param1": "value1"},
+                    "output": "expectedOutput",
+                    "explanation": "Step-by-step walkthrough"
+                }
+            ]
+        }
+        `;
+    }
+
+    // TIER 2: Business Rules (DMN Decision Tables)
+    static createDecisionTablePrompt(
+        useCase: UseCase,
+        requirements: any,
+        domainModel: string
+    ): string {
+        return `
+        Identify complex business rules in this use case that should be modeled as decision tables.
+
+        USE CASE: ${useCase.title}
+        NARRATIVE: ${useCase.narrative}
+        ACTORS: ${useCase.actors.join(', ')}
+
+        REQUIREMENTS CONTEXT:
+        ${JSON.stringify(requirements, null, 2)}
+
+        DOMAIN MODEL:
+        ${domainModel}
+
+        INSTRUCTIONS:
+        1. Look for multi-conditional logic (IF-THEN-ELSE chains with multiple conditions)
+        2. Identify decision points where multiple inputs affect outputs
+        3. Create DMN decision tables with:
+           - Clear input conditions
+           - Output actions/values
+           - Hit policy (UNIQUE, FIRST, PRIORITY, etc.)
+           - All possible rule combinations
+        4. Use FEEL expressions where appropriate:
+           - Comparisons: >, <, >=, <=, =, !=
+           - Ranges: [100..500], ]0..100[
+           - Lists: "Premium", "Gold", "Silver"
+           - Wildcards: * (any value)
+
+        COMMON DECISION TABLE PATTERNS:
+        - Pricing/discount logic (input: customer type, order amount; output: discount %)
+        - Approval workflows (input: amount, role; output: approved, approver)
+        - Risk assessment (input: score, history; output: risk level, action)
+        - Eligibility checks (input: age, status; output: eligible, reason)
+        - Resource allocation (input: priority, availability; output: allocated resource)
+
+        Return JSON array with this structure:
+        [
+            {
+                "id": "DT-001",
+                "name": "Pricing Decision",
+                "description": "Determines discount based on customer type and order amount",
+                "hitPolicy": "UNIQUE",
+                "inputs": [
+                    {
+                        "id": "input1",
+                        "label": "Customer Type",
+                        "expression": "customer.type",
+                        "type": "string",
+                        "allowedValues": ["Premium", "Standard"]
+                    },
+                    {
+                        "id": "input2",
+                        "label": "Order Amount",
+                        "expression": "order.total",
+                        "type": "number"
+                    }
+                ],
+                "outputs": [
+                    {
+                        "id": "output1",
+                        "label": "Discount %",
+                        "name": "discountPercentage",
+                        "type": "number"
+                    },
+                    {
+                        "id": "output2",
+                        "label": "Priority Shipping",
+                        "name": "priorityShipping",
+                        "type": "boolean"
+                    }
+                ],
+                "rules": [
+                    {
+                        "inputEntries": ["\\"Premium\\"", "> 1000"],
+                        "outputEntries": ["20", "true"],
+                        "description": "Premium customers with large orders get 20% off and priority shipping"
+                    },
+                    {
+                        "inputEntries": ["\\"Premium\\"", "> 500"],
+                        "outputEntries": ["15", "true"],
+                        "description": "Premium customers with medium orders get 15% off and priority shipping"
+                    },
+                    {
+                        "inputEntries": ["\\"Standard\\"", "> 1000"],
+                        "outputEntries": ["10", "false"],
+                        "description": "Standard customers with large orders get 10% off"
+                    },
+                    {
+                        "inputEntries": ["*", "*"],
+                        "outputEntries": ["0", "false"],
+                        "description": "Default: no discount, no priority shipping"
+                    }
+                ]
+            }
+        ]
+
+        IMPORTANT:
+        - Only create decision tables for truly complex conditional logic
+        - Each decision table should have at least 3 rules
+        - Ensure all combinations are covered (use * wildcard for defaults)
+        - Rules should be mutually exclusive for UNIQUE hit policy
+        `;
+    }
 }

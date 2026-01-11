@@ -585,4 +585,99 @@ ${req.qualityRequirements?.map(qr => `- ${qr.category}: ${qr.description}`).join
             });
         }
     }
+
+    // TIER 2: Generate Algorithm Specifications for all operations
+    async generateAlgorithmSpecs(document: DesignDocument): Promise<DesignDocument> {
+        if (!document.objectDesign || !document.objectDesign.contracts) {
+            throw new ValidationError('Object Design with contracts is required for algorithm spec generation', {
+                documentId: document.id
+            });
+        }
+
+        const context = `
+        Domain Model: ${document.analysis?.domainModelMermaid || 'Not available'}
+        Class Diagram: ${document.objectDesign.classDiagramMermaid}
+        Requirements: ${JSON.stringify(document.requirementsSpec)}
+        `;
+
+        // Generate algorithm specs for each contract
+        const updatedContracts = await Promise.all(
+            document.objectDesign.contracts.map(async (contract) => {
+                try {
+                    const prompt = PromptFactory.createAlgorithmSpecPrompt(
+                        contract.operation,
+                        contract,
+                        context
+                    );
+
+                    const result = await this.vertexRepo.generateText(prompt);
+
+                    // Parse JSON response
+                    const cleanJson = result.replace(/```json/g, '').replace(/```/g, '').trim();
+                    const algorithmSpec = JSON.parse(cleanJson);
+
+                    return {
+                        ...contract,
+                        algorithmSpec
+                    };
+                } catch (error) {
+                    console.error(`Failed to generate algorithm spec for ${contract.operation}:`, error);
+                    // Return contract without algorithm spec if generation fails
+                    return contract;
+                }
+            })
+        );
+
+        document.objectDesign.contracts = updatedContracts;
+        document.updatedAt = new Date();
+
+        return document;
+    }
+
+    // TIER 2: Generate Business Rules (DMN Decision Tables)
+    async generateBusinessRules(document: DesignDocument): Promise<DesignDocument> {
+        if (!document.analysis || !document.analysis.useCases || document.analysis.useCases.length === 0) {
+            throw new ValidationError('Use cases are required for business rules generation', {
+                documentId: document.id
+            });
+        }
+
+        const decisionTables: any[] = [];
+
+        // Generate decision tables for each use case
+        for (const useCase of document.analysis.useCases) {
+            try {
+                const prompt = PromptFactory.createDecisionTablePrompt(
+                    useCase,
+                    document.requirementsSpec,
+                    document.analysis.domainModelMermaid || ''
+                );
+
+                const result = await this.vertexRepo.generateText(prompt);
+
+                // Parse JSON response
+                const cleanJson = result.replace(/```json/g, '').replace(/```/g, '').trim();
+                const tables = JSON.parse(cleanJson);
+
+                if (Array.isArray(tables) && tables.length > 0) {
+                    decisionTables.push(...tables);
+                }
+            } catch (error) {
+                console.error(`Failed to generate decision tables for use case ${useCase.title}:`, error);
+                // Continue with other use cases
+            }
+        }
+
+        // Only update if we generated at least one decision table
+        if (decisionTables.length > 0) {
+            document.businessRules = {
+                decisionTables,
+                completed: true
+            };
+        }
+
+        document.updatedAt = new Date();
+
+        return document;
+    }
 }

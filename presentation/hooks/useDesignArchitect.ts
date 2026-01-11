@@ -242,6 +242,42 @@ export function useDesignArchitect() {
         }
     };
 
+    // TIER 2: Algorithm Specifications
+    const generateAlgorithmSpecs = async (
+        document: DesignDocument
+    ): Promise<DesignDocument> => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const service = getService();
+            return await service.generateAlgorithmSpecs(document);
+        } catch (err) {
+            const error = err instanceof Error ? err : new Error('Failed to generate Algorithm Specifications');
+            setError(error);
+            throw error;
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // TIER 2: Business Rules (DMN Decision Tables)
+    const generateBusinessRules = async (
+        document: DesignDocument
+    ): Promise<DesignDocument> => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const service = getService();
+            return await service.generateBusinessRules(document);
+        } catch (err) {
+            const error = err instanceof Error ? err : new Error('Failed to generate Business Rules');
+            setError(error);
+            throw error;
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     return {
         isLoading,
         error,
@@ -259,5 +295,8 @@ export function useDesignArchitect() {
         generateGherkinScenarios,
         generateApiSpecification,
         generateTraceabilityMatrix,
+        // TIER 2 Improvements
+        generateAlgorithmSpecs,
+        generateBusinessRules,
     };
 }

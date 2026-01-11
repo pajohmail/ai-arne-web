@@ -1,3 +1,6 @@
+import type { AlgorithmSpecification } from './AlgorithmSpecification';
+import type { BusinessRulesSpecification } from './BusinessRules';
+
 export type ProjectPhase =
     | 'requirementsSpec'
     | 'techStack'
@@ -49,6 +52,9 @@ export interface DesignDocument {
         completed: boolean;
     };
 
+    // Phase 3.5: Business Rules (TIER 2)
+    businessRules?: BusinessRulesSpecification;
+
     // Phase 4: Validation
     validation?: {
         reviews: ReviewComment[];
@@ -88,6 +94,7 @@ export interface OperationContract {
     postConditions: Condition[];
     invariants?: Condition[];
     exceptions?: ExceptionSpec[];
+    algorithmSpec?: AlgorithmSpecification;  // TIER 2: Detailed algorithm specification
 }
 
 export interface Condition {
