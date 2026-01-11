@@ -31,6 +31,9 @@ export interface IDesignArchitectService {
     generateDeploymentSpec(document: DesignDocument): Promise<DesignDocument>;
     generateObservabilitySpec(document: DesignDocument): Promise<DesignDocument>;
     generatePerformanceSpec(document: DesignDocument): Promise<DesignDocument>;
+    // TIER 4 Improvements
+    generateFormalMethodsSpec(document: DesignDocument): Promise<DesignDocument>;
+    generateStateMachineSpec(document: DesignDocument): Promise<DesignDocument>;
 }
 
 export class DesignArchitectService implements IDesignArchitectService {
@@ -44,6 +47,7 @@ export class DesignArchitectService implements IDesignArchitectService {
             projectName: projectId,
             description: initialDescription,
             currentPhase: 'requirementsSpec',
+            targetTier: 1,  // Default to TIER 1 (Basic)
             requirementsSpec: {
                 projectPurpose: '',
                 stakeholders: [],
@@ -1085,6 +1089,129 @@ ${req.qualityRequirements?.map(qr => `- ${qr.category}: ${qr.description}`).join
         } catch (error) {
             console.error('Failed to generate performance specification:', error);
             throw new ValidationError('Failed to generate valid performance specification', {
+                documentId: document.id,
+                error: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
+    }
+
+    // ==================================================================================
+    // TIER 4: FORMAL METHODS & VERIFIED STATE MACHINES (95-100% AI-Generated Code)
+    // ==================================================================================
+
+    /**
+     * TIER 4: Generate Formal Methods Specification
+     *
+     * Creates TLA+/Alloy specifications for critical components requiring formal verification.
+     * This includes:
+     * - Identification of critical components (payment, auth, concurrency, consensus)
+     * - TLA+ or Alloy specifications with temporal/structural properties
+     * - Properties to verify (Safety, Liveness, Invariants)
+     * - Model checking configurations
+     *
+     * Use cases:
+     * - Payment processing (transaction atomicity)
+     * - Authentication/Authorization (security properties)
+     * - Distributed systems (consensus, replication)
+     * - Concurrent operations (race conditions, deadlocks)
+     */
+    async generateFormalMethodsSpec(document: DesignDocument): Promise<DesignDocument> {
+        if (!document.requirementsSpec) {
+            throw new ValidationError('Requirements specification is required for formal methods generation', {
+                documentId: document.id
+            });
+        }
+
+        if (!document.analysis?.useCases || document.analysis.useCases.length === 0) {
+            throw new ValidationError('Use cases are required for formal methods generation', {
+                documentId: document.id
+            });
+        }
+
+        if (!document.objectDesign) {
+            throw new ValidationError('Object design is required for formal methods generation', {
+                documentId: document.id
+            });
+        }
+
+        const prompt = PromptFactory.createFormalMethodsPrompt(
+            document.requirementsSpec,
+            document.analysis.useCases,
+            document.objectDesign,
+            document.security
+        );
+
+        const result = await this.vertexRepo.generateText(prompt);
+
+        try {
+            // Parse JSON response
+            const cleanJson = result.replace(/```json/g, '').replace(/```/g, '').trim();
+            const formalMethodsSpec = JSON.parse(cleanJson);
+
+            document.formalMethods = formalMethodsSpec;
+            document.updatedAt = new Date();
+
+            return document;
+        } catch (error) {
+            console.error('Failed to generate formal methods specification:', error);
+            throw new ValidationError('Failed to generate valid formal methods specification', {
+                documentId: document.id,
+                error: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
+    }
+
+    /**
+     * TIER 4: Generate State Machine Specification
+     *
+     * Creates formal state machine specifications for entities with complex lifecycles.
+     * This includes:
+     * - State definitions with entry/exit actions
+     * - Transition definitions with guards and triggers
+     * - State invariants and properties to verify
+     * - Mermaid state diagrams
+     * - Test cases for state transitions
+     *
+     * Use cases:
+     * - Order lifecycle (Created → Paid → Shipped → Delivered)
+     * - User account states (Active → Suspended → Deleted)
+     * - Payment processing (Pending → Authorized → Captured → Refunded)
+     * - Workflow orchestration (Task dependencies, approvals)
+     * - Document review (Draft → Review → Approved → Published)
+     */
+    async generateStateMachineSpec(document: DesignDocument): Promise<DesignDocument> {
+        if (!document.analysis?.useCases || document.analysis.useCases.length === 0) {
+            throw new ValidationError('Use cases are required for state machine generation', {
+                documentId: document.id
+            });
+        }
+
+        if (!document.objectDesign) {
+            throw new ValidationError('Object design is required for state machine generation', {
+                documentId: document.id
+            });
+        }
+
+        const prompt = PromptFactory.createStateMachinePrompt(
+            document.analysis.useCases,
+            document.objectDesign,
+            document.businessRules
+        );
+
+        const result = await this.vertexRepo.generateText(prompt);
+
+        try {
+            // Parse JSON response
+            const cleanJson = result.replace(/```json/g, '').replace(/```/g, '').trim();
+            const stateMachineSpec = JSON.parse(cleanJson);
+
+            document.stateMachines = stateMachineSpec;
+            document.updatedAt = new Date();
+
+            return document;
+        } catch (error) {
+            console.error('Failed to generate state machine specification:', error);
+            throw new ValidationError('Failed to generate valid state machine specification', {
                 documentId: document.id,
                 error: error instanceof Error ? error.message : 'Unknown error'
             });

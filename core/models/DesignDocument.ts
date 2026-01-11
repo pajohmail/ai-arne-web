@@ -6,6 +6,8 @@ import type { SecuritySpecification } from './SecurityModel';
 import type { DeploymentSpecification } from './DeploymentModel';
 import type { ObservabilitySpecification } from './ObservabilityModel';
 import type { PerformanceSpecification } from './PerformanceModel';
+import type { FormalMethodsSpecification } from './FormalMethodsModel';
+import type { StateMachineSpecification } from './StateMachineModel';
 
 export type ProjectPhase =
     | 'requirementsSpec'
@@ -13,12 +15,15 @@ export type ProjectPhase =
     | 'analysis'
     | 'completed';
 
+export type TargetTier = 1 | 2 | 3 | 4;
+
 export interface DesignDocument {
     id: string;
     userId: string;
     projectName: string;
     description: string;
     currentPhase: ProjectPhase;
+    targetTier: TargetTier;        // Which TIER to generate specs for (1-4)
 
     // Phase 0: Requirements Specification
     requirementsSpec?: RequirementsSpecification;
@@ -78,6 +83,12 @@ export interface DesignDocument {
 
     // Phase 3.11: Performance (TIER 3)
     performance?: PerformanceSpecification;
+
+    // Phase 3.12: Formal Methods (TIER 4)
+    formalMethods?: FormalMethodsSpecification;
+
+    // Phase 3.13: State Machines (TIER 4)
+    stateMachines?: StateMachineSpecification;
 
     // Phase 4: Validation
     validation?: {

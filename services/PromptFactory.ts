@@ -2253,4 +2253,1283 @@ export class PromptFactory {
         - Monitor and adjust based on actual usage
         `;
     }
+
+    // ==================================================================================
+    // TIER 4: FORMAL METHODS & VERIFIED STATE MACHINES (95-100% AI-Generated Code)
+    // ==================================================================================
+
+    /**
+     * TIER 4: Generate Formal Methods Specification (TLA+, Alloy, Z)
+     * Purpose: Enable AI to generate formally verified implementations of critical components
+     *
+     * This specification provides:
+     * 1. Identification of critical components requiring formal verification
+     * 2. TLA+ or Alloy specifications for temporal/structural properties
+     * 3. Properties to verify (Safety, Liveness, Invariants)
+     * 4. Model checking configurations
+     *
+     * Use cases:
+     * - Payment processing (transaction atomicity, double-spending prevention)
+     * - Authentication/Authorization (security properties)
+     * - Distributed consensus (Raft, Paxos)
+     * - Concurrent data structures (race conditions, deadlocks)
+     * - State machine correctness
+     *
+     * Research basis:
+     * - AWS uses TLA+ for DynamoDB, S3, EBS (found critical bugs)
+     * - Microsoft uses TLA+ for Azure Cosmos DB
+     * - TLA+ can verify properties across 35+ step state traces
+     * - Alloy good for structural invariants, TLA+ better for concurrency
+     *
+     * @param requirements - Requirements specification
+     * @param useCases - Use cases from analysis
+     * @param objectDesign - Class diagrams and contracts
+     * @param security - Security specification (threats, controls)
+     * @returns Prompt for AI to generate formal methods specification
+     */
+    static createFormalMethodsPrompt(
+        requirements: any,
+        useCases: any[],
+        objectDesign: any,
+        security?: any
+    ): string {
+        const reqStr = requirements ? JSON.stringify(requirements, null, 2) : 'Not provided';
+        const useCasesStr = useCases ? JSON.stringify(useCases, null, 2) : 'Not provided';
+        const designStr = objectDesign ? JSON.stringify(objectDesign, null, 2) : 'Not provided';
+        const securityStr = security ? JSON.stringify(security, null, 2) : 'Not provided';
+
+        return `
+        You are a formal methods expert specializing in TLA+ and Alloy specifications.
+        Generate a comprehensive formal methods specification for this system.
+
+        ===============================================================================
+        CONTEXT INFORMATION
+        ===============================================================================
+
+        REQUIREMENTS:
+        ${reqStr}
+
+        USE CASES:
+        ${useCasesStr}
+
+        OBJECT DESIGN:
+        ${designStr}
+
+        SECURITY SPECIFICATION:
+        ${securityStr}
+
+        ===============================================================================
+        YOUR TASK: GENERATE FORMAL METHODS SPECIFICATION
+        ===============================================================================
+
+        STEP 1: IDENTIFY CRITICAL COMPONENTS
+        -------------------------------------
+        Analyze the system and identify components that require formal verification:
+
+        Component Types to Look For:
+        - CONCURRENCY: Multi-threaded operations, distributed systems, race conditions
+        - CONSENSUS: Distributed agreement, leader election, replication
+        - TRANSACTIONS: ACID guarantees, two-phase commit, rollback safety
+        - AUTHENTICATION: Login flows, token validation, session management
+        - AUTHORIZATION: Permission checks, RBAC enforcement, privilege escalation
+        - PAYMENT: Balance updates, transaction atomicity, double-spending prevention
+        - DATA INTEGRITY: Consistency checks, referential integrity, validation
+        - STATE MACHINES: Complex entity state transitions (Order, User, Workflow)
+        - WORKFLOW: Business process orchestration, task dependencies
+        - REPLICATION: Data synchronization, conflict resolution
+
+        For each critical component, specify:
+        {
+            "id": "comp-001",
+            "name": "Payment Transaction Processing",
+            "type": "Payment",
+            "description": "Handles financial transactions with atomicity guarantees",
+            "criticalityReason": "Financial loss possible if atomicity violated",
+            "complexity": "High",
+            "requiresFormalVerification": true,
+            "verificationMethod": ["TLA+"]
+        }
+
+        STEP 2: CHOOSE VERIFICATION METHOD
+        -----------------------------------
+        For each critical component, select appropriate formal method:
+
+        - TLA+ (Temporal Logic of Actions): Best for concurrent/distributed algorithms, state machines, temporal properties
+        - Alloy: Best for structural invariants, data models, relational properties
+        - Z: Best for data-centric systems with complex invariants
+        - SPIN: Best for protocol verification, message passing
+        - Coq/Isabelle: Best for mathematical proof, compiler verification (overkill for most apps)
+
+        Guidelines:
+        - Use TLA+ for: Payments, Auth, Consensus, Concurrency, State Machines
+        - Use Alloy for: Data integrity, Permissions, Referential constraints
+        - For most web applications: TLA+ is recommended (AWS standard)
+
+        STEP 3: WRITE FORMAL SPECIFICATIONS
+        ------------------------------------
+        For each component requiring formal verification, write specification:
+
+        TLA+ SPECIFICATION STRUCTURE:
+        ---- MODULE ComponentName ----
+        EXTENDS Naturals, Sequences, FiniteSets
+
+        CONSTANTS
+            MaxValue,
+            Users,
+            Resources
+
+        VARIABLES
+            state,
+            data,
+            history
+
+        TypeInvariant ==
+            /\\ state \\in [Users -> {"Active", "Suspended", "Deleted"}]
+            /\\ data \\in [Resources -> SUBSET Users]
+
+        Init ==
+            /\\ state = [u \\in Users |-> "Active"]
+            /\\ data = [r \\in Resources |-> {}]
+            /\\ history = <<>>
+
+        Operation(user, resource) ==
+            /\\ Preconditions...
+            /\\ state' = [state EXCEPT ![user] = NewState]
+            /\\ data' = [data EXCEPT ![resource] = @ \\cup {user}]
+            /\\ history' = Append(history, <<operation, user, resource>>)
+
+        Next ==
+            \\E u \\in Users, r \\in Resources : Operation(u, r)
+
+        Spec == Init /\\ [][Next]_<<state, data, history>>
+
+        (* Properties to verify *)
+        SafetyProperty == \\A u \\in Users : state[u] = "Active" => ...
+        LivenessProperty == <>[](...) (* Eventually always true *)
+        InvariantProperty == []TypeInvariant
+
+        THEOREM Spec => []SafetyProperty
+        THEOREM Spec => LivenessProperty
+        ====
+
+        ALLOY SPECIFICATION STRUCTURE:
+        abstract sig User {}
+        sig ActiveUser extends User {}
+        sig Resource {
+            owner: User,
+            permissions: set User
+        }
+
+        fact NoSelfOwnership {
+            no r: Resource | r.owner in r.permissions
+        }
+
+        pred grantPermission[r: Resource, u: User] {
+            u not in r.permissions
+            r.permissions' = r.permissions + u
+        }
+
+        assert OwnerAlwaysHasAccess {
+            always (all r: Resource | r.owner in r.permissions)
+        }
+
+        check OwnerAlwaysHasAccess for 5
+
+        STEP 4: DEFINE PROPERTIES TO VERIFY
+        ------------------------------------
+        For each specification, define properties to check:
+
+        Property Types:
+        - SAFETY: "Nothing bad ever happens" (e.g., "Balance never goes negative")
+        - LIVENESS: "Something good eventually happens" (e.g., "Every request eventually completes")
+        - FAIRNESS: "Every process gets a turn" (e.g., "No starvation")
+        - INVARIANT: "Always true" (e.g., "Total balance = sum of all accounts")
+        - REACHABILITY: "Can reach this state" (e.g., "Order can reach Delivered")
+        - DEADLOCK FREEDOM: "No deadlocks" (e.g., "System never stuck")
+        - TERMINATION: "Always terminates" (e.g., "Loop always ends")
+
+        Example properties:
+        {
+            "id": "prop-001",
+            "name": "BalanceNonNegative",
+            "type": "Safety",
+            "formula": "\\\\A account \\\\in Accounts : balance[account] >= 0",
+            "description": "Bank account balance must never be negative",
+            "critical": true
+        }
+
+        STEP 5: DEFINE INVARIANTS
+        --------------------------
+        System-wide and component-specific invariants:
+
+        {
+            "id": "inv-001",
+            "name": "MoneyConservation",
+            "expression": "SUM(all_balances) = initial_total_balance",
+            "description": "Total money in system is conserved",
+            "scope": "Global",
+            "mustHold": "Always"
+        }
+
+        STEP 6: MODEL CHECKING CONFIGURATION
+        -------------------------------------
+        For TLC model checker (TLA+):
+        {
+            "tool": "TLC",
+            "configuration": {
+                "maxStates": 100000000,
+                "maxTraceLength": 50,
+                "workers": 4,
+                "seed": 42,
+                "symmetry": true
+            },
+            "constants": {
+                "MaxBalance": 10000,
+                "Accounts": ["A", "B", "C"]
+            }
+        }
+
+        For Alloy Analyzer:
+        {
+            "tool": "Alloy Analyzer",
+            "configuration": {
+                "scope": 5,
+                "maxSeq": 4,
+                "expects": 0  // Number of expected counterexamples
+            }
+        }
+
+        ===============================================================================
+        REAL-WORLD EXAMPLES TO FOLLOW
+        ===============================================================================
+
+        EXAMPLE 1: Bank Account (TLA+)
+        -------------------------------
+        Critical Component: "Account Balance Management"
+        Type: Transaction
+        Properties:
+        - Safety: Balance never negative
+        - Safety: Total money conserved
+        - Liveness: Transfers eventually complete
+
+        TLA+ Spec:
+        ---- MODULE BankAccount ----
+        EXTENDS Naturals, TLC
+
+        CONSTANTS MaxBalance, Accounts
+
+        VARIABLES balance, history
+
+        TypeInvariant ==
+            /\\ balance \\in [Accounts -> Nat]
+            /\\ \\A a \\in Accounts : balance[a] <= MaxBalance
+
+        Init ==
+            /\\ balance = [a \\in Accounts |-> 0]
+            /\\ history = <<>>
+
+        Deposit(account, amount) ==
+            /\\ amount > 0
+            /\\ balance[account] + amount <= MaxBalance
+            /\\ balance' = [balance EXCEPT ![account] = @ + amount]
+            /\\ history' = Append(history, <<"deposit", account, amount>>)
+
+        Withdraw(account, amount) ==
+            /\\ amount > 0
+            /\\ balance[account] >= amount
+            /\\ balance' = [balance EXCEPT ![account] = @ - amount]
+            /\\ history' = Append(history, <<"withdraw", account, amount>>)
+
+        Transfer(from, to, amount) ==
+            /\\ from /= to
+            /\\ amount > 0
+            /\\ balance[from] >= amount
+            /\\ balance[to] + amount <= MaxBalance
+            /\\ balance' = [balance EXCEPT ![from] = @ - amount, ![to] = @ + amount]
+            /\\ history' = Append(history, <<"transfer", from, to, amount>>)
+
+        Next ==
+            \\/ \\E a \\in Accounts, amt \\in 1..100 : Deposit(a, amt)
+            \\/ \\E a \\in Accounts, amt \\in 1..100 : Withdraw(a, amt)
+            \\/ \\E a1, a2 \\in Accounts, amt \\in 1..100 : Transfer(a1, a2, amt)
+
+        Spec == Init /\\ [][Next]_<<balance, history>>
+
+        BalanceNonNegative == \\A a \\in Accounts : balance[a] >= 0
+        MoneyConservation == LET total == SUM({balance[a] : a \\in Accounts}) IN total <= MaxBalance * Len(Accounts)
+
+        THEOREM Spec => []BalanceNonNegative
+        THEOREM Spec => []MoneyConservation
+        ====
+
+        EXAMPLE 2: File System (Alloy)
+        -------------------------------
+        Critical Component: "File System Integrity"
+        Type: DataIntegrity
+        Properties:
+        - Safety: No cycles in directory structure
+        - Safety: All objects reachable from root
+        - Safety: No orphaned files
+
+        abstract sig Object {}
+        sig File extends Object {}
+        sig Dir extends Object {
+            contents: set Object
+        }
+
+        one sig Root extends Dir {}
+
+        fact NoSelfContainment {
+            no d: Dir | d in d.^contents
+        }
+
+        fact RootHasNoParent {
+            no d: Dir | Root in d.contents
+        }
+
+        fact AllObjectsReachable {
+            Object in Root.*contents
+        }
+
+        pred createFile[d: Dir, f: File] {
+            f not in d.contents
+            d.contents' = d.contents + f
+        }
+
+        pred deleteFile[d: Dir, f: File] {
+            f in d.contents
+            d.contents' = d.contents - f
+        }
+
+        assert NoOrphans {
+            always (all o: Object | o in Root.*contents)
+        }
+
+        assert NoCycles {
+            always (no d: Dir | d in d.^contents)
+        }
+
+        check NoOrphans for 5
+        check NoCycles for 5
+
+        ===============================================================================
+        OUTPUT FORMAT (JSON)
+        ===============================================================================
+
+        Return a JSON object with this structure:
+
+        {
+            "criticalComponents": [
+                {
+                    "id": "comp-001",
+                    "name": "Payment Transaction Processing",
+                    "type": "Payment",
+                    "description": "...",
+                    "criticalityReason": "Financial loss if atomicity violated",
+                    "complexity": "High",
+                    "requiresFormalVerification": true,
+                    "verificationMethod": ["TLA+"]
+                }
+            ],
+            "formalSpecs": [
+                {
+                    "id": "spec-001",
+                    "componentId": "comp-001",
+                    "language": "TLA+",
+                    "specification": "---- MODULE Payment ----\\n...",
+                    "properties": [
+                        {
+                            "id": "prop-001",
+                            "name": "BalanceNonNegative",
+                            "type": "Safety",
+                            "formula": "\\\\A account : balance[account] >= 0",
+                            "description": "Balance never negative",
+                            "critical": true
+                        }
+                    ],
+                    "invariants": [
+                        {
+                            "id": "inv-001",
+                            "name": "TypeInvariant",
+                            "expression": "balance \\\\in [Accounts -> Nat]",
+                            "description": "Balance is natural number",
+                            "scope": "Component",
+                            "mustHold": "Always"
+                        }
+                    ],
+                    "temporalProperties": [
+                        {
+                            "id": "temp-001",
+                            "name": "EventualCompletion",
+                            "operator": "Eventually",
+                            "formula": "<>(transaction.status = \\"completed\\")",
+                            "description": "Every transaction eventually completes"
+                        }
+                    ]
+                }
+            ],
+            "propertyVerification": [
+                {
+                    "specId": "spec-001",
+                    "propertyId": "prop-001",
+                    "method": "Model Checking",
+                    "status": "Pending"
+                }
+            ],
+            "modelCheckingResults": [
+                {
+                    "specId": "spec-001",
+                    "tool": "TLC",
+                    "configuration": {
+                        "maxStates": 100000000,
+                        "maxTraceLength": 50,
+                        "workers": 4,
+                        "symmetry": true
+                    },
+                    "results": [],
+                    "summary": {
+                        "totalProperties": 3,
+                        "satisfied": 0,
+                        "violated": 0,
+                        "unknown": 3,
+                        "statesExplored": 0,
+                        "distinctStates": 0,
+                        "duration": 0,
+                        "memoryUsed": "0MB"
+                    },
+                    "executedAt": "${new Date().toISOString()}"
+                }
+            ],
+            "completed": true
+        }
+
+        ===============================================================================
+        GUIDELINES
+        ===============================================================================
+
+        1. FOCUS ON CRITICAL COMPONENTS: Only apply formal methods where correctness is essential
+        2. START SIMPLE: Use TLA+ for most cases (AWS standard)
+        3. REALISTIC PROPERTIES: Focus on properties that catch real bugs (e.g., race conditions, atomicity violations)
+        4. INCLUDE EXAMPLES: Provide concrete constant values for model checking
+        5. DOCUMENTATION: Explain WHY each property matters and WHAT bugs it prevents
+        6. EXECUTABLE SPECS: Ensure specifications can run in TLC or Alloy Analyzer
+        7. COUNTEREXAMPLES: If a property is violated, the model checker will provide a trace
+
+        Return ONLY valid JSON. No markdown, no explanations outside JSON.
+        `;
+    }
+
+    /**
+     * TIER 4: Generate State Machine Specification with Property Verification
+     * Purpose: Enable AI to generate correct state transition implementations
+     *
+     * This specification provides:
+     * 1. Formal state machine definitions for entities with complex lifecycle
+     * 2. State transition rules with guards and actions
+     * 3. State invariants and properties to verify
+     * 4. Mermaid state diagrams for visualization
+     * 5. Test cases for state transitions
+     *
+     * Use cases:
+     * - Order lifecycle (Created → Paid → Shipped → Delivered)
+     * - User account states (Active → Suspended → Deleted)
+     * - Workflow orchestration (Task dependencies, approvals)
+     * - Payment processing (Pending → Authorized → Captured → Refunded)
+     * - Document review (Draft → Review → Approved → Published)
+     *
+     * Research basis:
+     * - UML State Machines (OMG standard)
+     * - Hierarchical state machines (substates, composite states)
+     * - Property verification (Safety, Liveness, Reachability, Deadlock Freedom)
+     * - Executable state machines (XState, Statecharts)
+     *
+     * @param useCases - Use cases from analysis
+     * @param objectDesign - Class diagrams and contracts
+     * @param businessRules - Business rules specification
+     * @returns Prompt for AI to generate state machine specification
+     */
+    static createStateMachinePrompt(
+        useCases: any[],
+        objectDesign: any,
+        businessRules?: any
+    ): string {
+        const useCasesStr = useCases ? JSON.stringify(useCases, null, 2) : 'Not provided';
+        const designStr = objectDesign ? JSON.stringify(objectDesign, null, 2) : 'Not provided';
+        const rulesStr = businessRules ? JSON.stringify(businessRules, null, 2) : 'Not provided';
+
+        return `
+        You are a state machine modeling expert specializing in UML State Machines and formal verification.
+        Generate comprehensive state machine specifications for entities with complex lifecycles.
+
+        ===============================================================================
+        CONTEXT INFORMATION
+        ===============================================================================
+
+        USE CASES:
+        ${useCasesStr}
+
+        OBJECT DESIGN:
+        ${designStr}
+
+        BUSINESS RULES:
+        ${rulesStr}
+
+        ===============================================================================
+        YOUR TASK: GENERATE STATE MACHINE SPECIFICATIONS
+        ===============================================================================
+
+        STEP 1: IDENTIFY STATEFUL ENTITIES
+        -----------------------------------
+        Analyze the system and identify entities that require state machines:
+
+        Look for entities with:
+        - Complex lifecycle (multiple states, transitions)
+        - State-dependent behavior (operations valid only in certain states)
+        - Business workflow (approval chains, order processing)
+        - Long-running processes (multi-step workflows)
+        - Event-driven behavior (state changes triggered by events)
+
+        Common examples:
+        - Order/Purchase (Created → Paid → Shipped → Delivered → Completed)
+        - User Account (Active → Suspended → Deleted)
+        - Document (Draft → Review → Approved → Published → Archived)
+        - Payment (Pending → Authorized → Captured → Refunded)
+        - Ticket/Issue (Open → InProgress → Resolved → Closed)
+        - Subscription (Trial → Active → Paused → Cancelled → Expired)
+        - Workflow Task (Pending → Assigned → InProgress → Completed → Verified)
+
+        For each stateful entity, create a state machine specification.
+
+        STEP 2: DEFINE STATES
+        ---------------------
+        For each state machine, define all possible states:
+
+        State Types:
+        - Initial: Starting state (exactly one)
+        - Normal: Regular states
+        - Final: End states (can be multiple)
+        - Error: Error states
+        - Choice: Decision points (conditional transitions)
+        - Fork: Split into concurrent substates
+        - Join: Merge concurrent substates
+
+        For each state, specify:
+        {
+            "id": "state-paid",
+            "name": "Paid",
+            "type": "Normal",
+            "entryActions": [
+                {
+                    "type": "Call",
+                    "target": "sendConfirmationEmail",
+                    "parameters": {"orderId": "order.id"},
+                    "description": "Send payment confirmation to customer"
+                }
+            ],
+            "exitActions": [],
+            "doActions": [],
+            "allowedOperations": ["ship", "cancel", "refund"],
+            "invariants": [
+                "order.payment != null",
+                "order.payment.status == 'completed'",
+                "order.total > 0"
+            ],
+            "timeout": {
+                "duration": 172800000,  // 48 hours in ms
+                "targetState": "cancelled",
+                "action": {
+                    "type": "Call",
+                    "target": "refundPayment",
+                    "description": "Auto-cancel if not shipped within 48h"
+                }
+            }
+        }
+
+        STEP 3: DEFINE TRANSITIONS
+        ---------------------------
+        For each transition between states:
+
+        Transition Definition:
+        {
+            "id": "trans-001",
+            "from": "payment-pending",
+            "to": "paid",
+            "trigger": {
+                "type": "Event",
+                "event": "payment_success",
+                "condition": "payment.amount == order.total"
+            },
+            "guard": {
+                "expression": "order.items.length > 0 && order.total > 0",
+                "variables": ["order.items", "order.total"],
+                "description": "Order must have items and positive total"
+            },
+            "actions": [
+                {
+                    "type": "Assign",
+                    "target": "order.paymentId",
+                    "parameters": {"value": "payment.id"},
+                    "description": "Record payment ID"
+                },
+                {
+                    "type": "Send",
+                    "target": "NotificationService",
+                    "parameters": {"event": "order_paid", "orderId": "order.id"},
+                    "description": "Notify fulfillment service"
+                }
+            ],
+            "priority": 1,
+            "description": "Transition from pending to paid when payment succeeds"
+        }
+
+        Trigger Types:
+        - Event: External event (API call, user action)
+        - Completion: State activities completed
+        - Time: Timeout or scheduled event
+        - Change: Variable value changed
+        - Call: Method invocation
+
+        STEP 4: DEFINE STATE INVARIANTS
+        --------------------------------
+        Conditions that must hold in specific states or globally:
+
+        {
+            "id": "inv-001",
+            "name": "PaidOrderHasPayment",
+            "expression": "state == 'Paid' => payment != null",
+            "description": "Paid orders must have payment record",
+            "scope": "State",
+            "appliesTo": ["paid", "shipped", "delivered"],
+            "critical": true
+        }
+
+        STEP 5: DEFINE PROPERTIES TO VERIFY
+        ------------------------------------
+        Properties to check for state machine correctness:
+
+        Property Types:
+        - Safety: Bad states never reached (e.g., "Never deliver without payment")
+        - Liveness: Good states eventually reached (e.g., "Every order eventually reaches final state")
+        - Reachability: All states reachable from initial state
+        - Deadlock Freedom: No states where system gets stuck
+        - Determinism: At most one transition per event in each state
+        - Completeness: All events handled in all states
+
+        {
+            "id": "prop-001",
+            "name": "NeverDeliverWithoutPayment",
+            "type": "Safety",
+            "formula": "state == 'Delivered' => payment != null && payment.status == 'completed'",
+            "description": "Cannot deliver order without successful payment",
+            "verificationMethod": "Model Checking",
+            "verificationStatus": "Verified"
+        }
+
+        STEP 6: GENERATE MERMAID STATE DIAGRAM
+        ---------------------------------------
+        Generate Mermaid syntax for UML state diagram:
+
+        stateDiagram-v2
+            [*] --> Created
+            Created --> PaymentPending : submit
+            PaymentPending --> Paid : payment_success
+            PaymentPending --> Failed : payment_failed
+            PaymentPending --> Cancelled : cancel
+            Paid --> Processing : start_processing
+            Processing --> Shipped : ship
+            Shipped --> Delivered : confirm_delivery
+            Delivered --> [*]
+            Cancelled --> [*]
+            Failed --> [*]
+
+            note right of PaymentPending
+                Timeout: 30 minutes
+                Auto-cancel if no payment
+            end note
+
+            note right of Paid
+                Invariant: payment != null
+                Actions: sendConfirmationEmail
+            end note
+
+        STEP 7: GENERATE TEST CASES
+        ----------------------------
+        Test cases to verify state machine behavior:
+
+        {
+            "id": "test-001",
+            "name": "Happy Path - Order Fulfillment",
+            "description": "Test successful order flow from creation to delivery",
+            "initialState": "created",
+            "eventSequence": [
+                {
+                    "event": "submit",
+                    "parameters": {"items": [{"id": 1, "qty": 2}], "total": 100},
+                    "expectedState": "payment-pending",
+                    "expectedGuard": true
+                },
+                {
+                    "event": "payment_success",
+                    "parameters": {"paymentId": "pay_123", "amount": 100},
+                    "expectedState": "paid",
+                    "expectedGuard": true
+                },
+                {
+                    "event": "start_processing",
+                    "parameters": {},
+                    "expectedState": "processing",
+                    "expectedGuard": true
+                },
+                {
+                    "event": "ship",
+                    "parameters": {"trackingNumber": "TRK123"},
+                    "expectedState": "shipped",
+                    "expectedGuard": true
+                },
+                {
+                    "event": "confirm_delivery",
+                    "parameters": {},
+                    "expectedState": "delivered",
+                    "expectedGuard": true
+                }
+            ],
+            "expectedFinalState": "delivered",
+            "expectedActions": [
+                "sendConfirmationEmail",
+                "notifyFulfillmentService",
+                "sendShippingNotification",
+                "sendDeliveryConfirmation"
+            ],
+            "shouldSucceed": true
+        }
+
+        ===============================================================================
+        REAL-WORLD EXAMPLE: ORDER STATE MACHINE
+        ===============================================================================
+
+        {
+            "id": "sm-order",
+            "name": "Order Lifecycle",
+            "entity": "Order",
+            "description": "State machine for e-commerce order processing",
+            "type": "Simple",
+            "states": [
+                {
+                    "id": "created",
+                    "name": "Created",
+                    "type": "Initial",
+                    "entryActions": [],
+                    "exitActions": [],
+                    "allowedOperations": ["submit", "cancel"],
+                    "invariants": ["order.items.length > 0", "order.total > 0"]
+                },
+                {
+                    "id": "payment-pending",
+                    "name": "PaymentPending",
+                    "type": "Normal",
+                    "entryActions": [
+                        {
+                            "type": "Call",
+                            "target": "initiatePayment",
+                            "description": "Start payment processing"
+                        }
+                    ],
+                    "exitActions": [],
+                    "allowedOperations": ["cancel"],
+                    "invariants": ["order.total > 0"],
+                    "timeout": {
+                        "duration": 1800000,  // 30 min
+                        "targetState": "cancelled",
+                        "action": {
+                            "type": "Call",
+                            "target": "cancelOrder",
+                            "description": "Auto-cancel if payment not completed"
+                        }
+                    }
+                },
+                {
+                    "id": "paid",
+                    "name": "Paid",
+                    "type": "Normal",
+                    "entryActions": [
+                        {
+                            "type": "Send",
+                            "target": "EmailService",
+                            "parameters": {"template": "payment_confirmation"},
+                            "description": "Send payment confirmation email"
+                        }
+                    ],
+                    "exitActions": [],
+                    "allowedOperations": ["start_processing", "cancel", "refund"],
+                    "invariants": [
+                        "order.payment != null",
+                        "order.payment.status == 'completed'"
+                    ]
+                },
+                {
+                    "id": "processing",
+                    "name": "Processing",
+                    "type": "Normal",
+                    "entryActions": [
+                        {
+                            "type": "Call",
+                            "target": "allocateInventory",
+                            "description": "Reserve items from inventory"
+                        }
+                    ],
+                    "exitActions": [],
+                    "allowedOperations": ["ship", "cancel"],
+                    "invariants": ["order.inventoryAllocated == true"]
+                },
+                {
+                    "id": "shipped",
+                    "name": "Shipped",
+                    "type": "Normal",
+                    "entryActions": [
+                        {
+                            "type": "Send",
+                            "target": "EmailService",
+                            "parameters": {"template": "shipping_notification"},
+                            "description": "Send shipping notification"
+                        }
+                    ],
+                    "exitActions": [],
+                    "allowedOperations": ["confirm_delivery"],
+                    "invariants": ["order.trackingNumber != null"]
+                },
+                {
+                    "id": "delivered",
+                    "name": "Delivered",
+                    "type": "Final",
+                    "entryActions": [
+                        {
+                            "type": "Call",
+                            "target": "completeOrder",
+                            "description": "Mark order as completed"
+                        }
+                    ],
+                    "exitActions": [],
+                    "allowedOperations": [],
+                    "invariants": ["order.deliveredAt != null"]
+                },
+                {
+                    "id": "cancelled",
+                    "name": "Cancelled",
+                    "type": "Final",
+                    "entryActions": [
+                        {
+                            "type": "Call",
+                            "target": "refundIfPaid",
+                            "description": "Refund payment if order was paid"
+                        }
+                    ],
+                    "exitActions": [],
+                    "allowedOperations": [],
+                    "invariants": []
+                },
+                {
+                    "id": "failed",
+                    "name": "Failed",
+                    "type": "Error",
+                    "entryActions": [
+                        {
+                            "type": "Log",
+                            "target": "ErrorLog",
+                            "parameters": {"level": "ERROR"},
+                            "description": "Log payment failure"
+                        }
+                    ],
+                    "exitActions": [],
+                    "allowedOperations": ["retry"],
+                    "invariants": []
+                }
+            ],
+            "transitions": [
+                {
+                    "id": "trans-001",
+                    "from": "created",
+                    "to": "payment-pending",
+                    "trigger": {
+                        "type": "Event",
+                        "event": "submit"
+                    },
+                    "guard": {
+                        "expression": "order.items.length > 0 && order.total > 0",
+                        "variables": ["order.items", "order.total"],
+                        "description": "Order must have items and positive total"
+                    },
+                    "actions": [
+                        {
+                            "type": "Assign",
+                            "target": "order.submittedAt",
+                            "parameters": {"value": "Date.now()"},
+                            "description": "Record submission time"
+                        }
+                    ],
+                    "priority": 1,
+                    "description": "Submit order for payment"
+                },
+                {
+                    "id": "trans-002",
+                    "from": "payment-pending",
+                    "to": "paid",
+                    "trigger": {
+                        "type": "Event",
+                        "event": "payment_success"
+                    },
+                    "guard": {
+                        "expression": "payment.amount == order.total",
+                        "variables": ["payment.amount", "order.total"],
+                        "description": "Payment amount must match order total"
+                    },
+                    "actions": [
+                        {
+                            "type": "Assign",
+                            "target": "order.paymentId",
+                            "parameters": {"value": "payment.id"},
+                            "description": "Record payment ID"
+                        }
+                    ],
+                    "priority": 1,
+                    "description": "Payment completed successfully"
+                },
+                {
+                    "id": "trans-003",
+                    "from": "payment-pending",
+                    "to": "failed",
+                    "trigger": {
+                        "type": "Event",
+                        "event": "payment_failed"
+                    },
+                    "actions": [
+                        {
+                            "type": "Assign",
+                            "target": "order.failureReason",
+                            "parameters": {"value": "payment.error"},
+                            "description": "Record failure reason"
+                        }
+                    ],
+                    "priority": 1,
+                    "description": "Payment failed"
+                },
+                {
+                    "id": "trans-004",
+                    "from": "paid",
+                    "to": "processing",
+                    "trigger": {
+                        "type": "Event",
+                        "event": "start_processing"
+                    },
+                    "priority": 1,
+                    "description": "Start order processing"
+                },
+                {
+                    "id": "trans-005",
+                    "from": "processing",
+                    "to": "shipped",
+                    "trigger": {
+                        "type": "Event",
+                        "event": "ship"
+                    },
+                    "guard": {
+                        "expression": "trackingNumber != null",
+                        "variables": ["trackingNumber"],
+                        "description": "Must have tracking number"
+                    },
+                    "actions": [
+                        {
+                            "type": "Assign",
+                            "target": "order.trackingNumber",
+                            "parameters": {"value": "trackingNumber"},
+                            "description": "Record tracking number"
+                        }
+                    ],
+                    "priority": 1,
+                    "description": "Ship order"
+                },
+                {
+                    "id": "trans-006",
+                    "from": "shipped",
+                    "to": "delivered",
+                    "trigger": {
+                        "type": "Event",
+                        "event": "confirm_delivery"
+                    },
+                    "actions": [
+                        {
+                            "type": "Assign",
+                            "target": "order.deliveredAt",
+                            "parameters": {"value": "Date.now()"},
+                            "description": "Record delivery time"
+                        }
+                    ],
+                    "priority": 1,
+                    "description": "Confirm delivery"
+                },
+                {
+                    "id": "trans-cancel",
+                    "from": "*",
+                    "to": "cancelled",
+                    "trigger": {
+                        "type": "Event",
+                        "event": "cancel"
+                    },
+                    "guard": {
+                        "expression": "state != 'shipped' && state != 'delivered'",
+                        "variables": ["state"],
+                        "description": "Cannot cancel after shipping"
+                    },
+                    "actions": [
+                        {
+                            "type": "Call",
+                            "target": "refundIfPaid",
+                            "description": "Refund if payment was made"
+                        }
+                    ],
+                    "priority": 10,
+                    "description": "Cancel order (from any non-final state)"
+                }
+            ],
+            "initialState": "created",
+            "finalStates": ["delivered", "cancelled"],
+            "errorStates": ["failed"],
+            "invariants": [
+                {
+                    "id": "inv-global-001",
+                    "name": "TotalPositive",
+                    "expression": "order.total > 0",
+                    "description": "Order total must always be positive",
+                    "scope": "Global",
+                    "critical": true
+                },
+                {
+                    "id": "inv-state-001",
+                    "name": "PaidHasPayment",
+                    "expression": "state IN ['paid', 'processing', 'shipped', 'delivered'] => payment != null",
+                    "description": "Paid orders must have payment record",
+                    "scope": "State",
+                    "appliesTo": ["paid", "processing", "shipped", "delivered"],
+                    "critical": true
+                }
+            ],
+            "properties": [
+                {
+                    "id": "prop-safety-001",
+                    "name": "NeverDeliverWithoutPayment",
+                    "type": "Safety",
+                    "formula": "state == 'delivered' => payment != null",
+                    "description": "Cannot deliver order without payment",
+                    "verificationMethod": "Model Checking",
+                    "verificationStatus": "Verified"
+                },
+                {
+                    "id": "prop-liveness-001",
+                    "name": "EventuallyFinal",
+                    "type": "Liveness",
+                    "formula": "<>(state IN finalStates)",
+                    "description": "Every order eventually reaches a final state",
+                    "verificationMethod": "Model Checking",
+                    "verificationStatus": "Verified"
+                },
+                {
+                    "id": "prop-reach-001",
+                    "name": "AllStatesReachable",
+                    "type": "Reachability",
+                    "formula": "ALL states (except error) reachable from initial",
+                    "description": "All non-error states should be reachable",
+                    "verificationMethod": "Model Checking",
+                    "verificationStatus": "Verified"
+                }
+            ],
+            "mermaidDiagram": "stateDiagram-v2\\n    [*] --> Created\\n    Created --> PaymentPending : submit\\n    PaymentPending --> Paid : payment_success\\n    PaymentPending --> Failed : payment_failed\\n    PaymentPending --> Cancelled : cancel\\n    Paid --> Processing : start_processing\\n    Processing --> Shipped : ship\\n    Shipped --> Delivered : confirm_delivery\\n    Delivered --> [*]\\n    Created --> Cancelled : cancel\\n    Paid --> Cancelled : cancel\\n    Processing --> Cancelled : cancel\\n    Cancelled --> [*]\\n    Failed --> [*]\\n\\n    note right of PaymentPending\\n        Timeout: 30 minutes\\n        Auto-cancel if no payment\\n    end note",
+            "testCases": [
+                {
+                    "id": "test-happy-path",
+                    "name": "Happy Path - Full Order Fulfillment",
+                    "description": "Test successful order flow from creation to delivery",
+                    "initialState": "created",
+                    "eventSequence": [
+                        {
+                            "event": "submit",
+                            "parameters": {"items": [{"id": 1, "qty": 2}], "total": 100},
+                            "expectedState": "payment-pending",
+                            "expectedGuard": true
+                        },
+                        {
+                            "event": "payment_success",
+                            "parameters": {"paymentId": "pay_123", "amount": 100},
+                            "expectedState": "paid",
+                            "expectedGuard": true
+                        },
+                        {
+                            "event": "start_processing",
+                            "parameters": {},
+                            "expectedState": "processing",
+                            "expectedGuard": true
+                        },
+                        {
+                            "event": "ship",
+                            "parameters": {"trackingNumber": "TRK123"},
+                            "expectedState": "shipped",
+                            "expectedGuard": true
+                        },
+                        {
+                            "event": "confirm_delivery",
+                            "parameters": {},
+                            "expectedState": "delivered",
+                            "expectedGuard": true
+                        }
+                    ],
+                    "expectedFinalState": "delivered",
+                    "expectedActions": ["sendConfirmationEmail", "sendShippingNotification"],
+                    "shouldSucceed": true
+                },
+                {
+                    "id": "test-payment-failure",
+                    "name": "Payment Failure",
+                    "description": "Test payment failure scenario",
+                    "initialState": "created",
+                    "eventSequence": [
+                        {
+                            "event": "submit",
+                            "parameters": {"items": [{"id": 1, "qty": 1}], "total": 50},
+                            "expectedState": "payment-pending",
+                            "expectedGuard": true
+                        },
+                        {
+                            "event": "payment_failed",
+                            "parameters": {"error": "Insufficient funds"},
+                            "expectedState": "failed",
+                            "expectedGuard": true
+                        }
+                    ],
+                    "expectedFinalState": "failed",
+                    "expectedActions": [],
+                    "shouldSucceed": true
+                },
+                {
+                    "id": "test-early-cancellation",
+                    "name": "Early Cancellation",
+                    "description": "Cancel order before payment",
+                    "initialState": "created",
+                    "eventSequence": [
+                        {
+                            "event": "submit",
+                            "parameters": {"items": [{"id": 1, "qty": 1}], "total": 50},
+                            "expectedState": "payment-pending",
+                            "expectedGuard": true
+                        },
+                        {
+                            "event": "cancel",
+                            "parameters": {},
+                            "expectedState": "cancelled",
+                            "expectedGuard": true
+                        }
+                    ],
+                    "expectedFinalState": "cancelled",
+                    "expectedActions": [],
+                    "shouldSucceed": true
+                },
+                {
+                    "id": "test-late-cancellation",
+                    "name": "Late Cancellation (After Payment)",
+                    "description": "Cancel order after payment is made",
+                    "initialState": "created",
+                    "eventSequence": [
+                        {
+                            "event": "submit",
+                            "parameters": {"items": [{"id": 1, "qty": 1}], "total": 50},
+                            "expectedState": "payment-pending",
+                            "expectedGuard": true
+                        },
+                        {
+                            "event": "payment_success",
+                            "parameters": {"paymentId": "pay_456", "amount": 50},
+                            "expectedState": "paid",
+                            "expectedGuard": true
+                        },
+                        {
+                            "event": "cancel",
+                            "parameters": {},
+                            "expectedState": "cancelled",
+                            "expectedGuard": true
+                        }
+                    ],
+                    "expectedFinalState": "cancelled",
+                    "expectedActions": ["refundIfPaid"],
+                    "shouldSucceed": true
+                },
+                {
+                    "id": "test-invalid-transition",
+                    "name": "Invalid Transition (Safety Violation)",
+                    "description": "Attempt to ship without payment",
+                    "initialState": "created",
+                    "eventSequence": [
+                        {
+                            "event": "submit",
+                            "parameters": {"items": [{"id": 1, "qty": 1}], "total": 50},
+                            "expectedState": "payment-pending",
+                            "expectedGuard": true
+                        },
+                        {
+                            "event": "ship",
+                            "parameters": {"trackingNumber": "TRK999"},
+                            "expectedState": "payment-pending",
+                            "expectedGuard": false
+                        }
+                    ],
+                    "expectedFinalState": "payment-pending",
+                    "expectedActions": [],
+                    "shouldSucceed": false,
+                    "violatesProperty": "NeverDeliverWithoutPayment"
+                }
+            ]
+        }
+
+        ===============================================================================
+        OUTPUT FORMAT (JSON)
+        ===============================================================================
+
+        Return a JSON object with this structure:
+
+        {
+            "stateMachines": [
+                {
+                    "id": "sm-order",
+                    "name": "Order Lifecycle",
+                    "entity": "Order",
+                    "description": "...",
+                    "type": "Simple",
+                    "states": [...],
+                    "transitions": [...],
+                    "initialState": "created",
+                    "finalStates": ["delivered", "cancelled"],
+                    "errorStates": ["failed"],
+                    "invariants": [...],
+                    "properties": [...],
+                    "mermaidDiagram": "...",
+                    "testCases": [...]
+                }
+            ],
+            "completed": true
+        }
+
+        ===============================================================================
+        GUIDELINES
+        ===============================================================================
+
+        1. IDENTIFY KEY ENTITIES: Focus on entities with complex lifecycles (Order, User, Document, Workflow)
+        2. COMPLETE STATE COVERAGE: Include all states (normal, error, final)
+        3. GUARD CONDITIONS: Use precise guard conditions to prevent invalid transitions
+        4. STATE INVARIANTS: Define conditions that must hold in each state
+        5. ENTRY/EXIT ACTIONS: Specify side effects when entering/leaving states
+        6. TIMEOUT HANDLING: Include timeout transitions where relevant (payment expiry, session timeout)
+        7. ERROR STATES: Model failure scenarios and recovery paths
+        8. PROPERTY VERIFICATION: Include safety, liveness, reachability properties
+        9. TEST CASES: Generate test cases for happy path, error cases, and property violations
+        10. MERMAID DIAGRAMS: Provide visual representation for human review
+
+        Return ONLY valid JSON. No markdown, no explanations outside JSON.
+        `;
+    }
 }

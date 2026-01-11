@@ -124,6 +124,7 @@ const ProjectDemoWrapper = ({ userId }: { userId: string }) => {
             projectName: `New Project ${new Date().toLocaleDateString()}`,
             description: 'Describe your system here...',
             currentPhase: 'requirementsSpec',
+            targetTier: 1,  // Default to TIER 1 (Basic)
             requirementsSpec: {
                 projectPurpose: '',
                 stakeholders: [],

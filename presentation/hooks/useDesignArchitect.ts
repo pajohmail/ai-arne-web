@@ -386,6 +386,42 @@ export function useDesignArchitect() {
         }
     };
 
+    // TIER 4: Formal Methods Specification
+    const generateFormalMethodsSpec = async (
+        document: DesignDocument
+    ): Promise<DesignDocument> => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const service = getService();
+            return await service.generateFormalMethodsSpec(document);
+        } catch (err) {
+            const error = err instanceof Error ? err : new Error('Failed to generate Formal Methods Specification');
+            setError(error);
+            throw error;
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // TIER 4: State Machine Specification
+    const generateStateMachineSpec = async (
+        document: DesignDocument
+    ): Promise<DesignDocument> => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const service = getService();
+            return await service.generateStateMachineSpec(document);
+        } catch (err) {
+            const error = err instanceof Error ? err : new Error('Failed to generate State Machine Specification');
+            setError(error);
+            throw error;
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     return {
         isLoading,
         error,
@@ -414,5 +450,8 @@ export function useDesignArchitect() {
         generateDeploymentSpec,
         generateObservabilitySpec,
         generatePerformanceSpec,
+        // TIER 4 Improvements
+        generateFormalMethodsSpec,
+        generateStateMachineSpec,
     };
 }
