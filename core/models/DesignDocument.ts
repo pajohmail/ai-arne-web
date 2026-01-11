@@ -2,6 +2,10 @@ import type { AlgorithmSpecification } from './AlgorithmSpecification';
 import type { BusinessRulesSpecification } from './BusinessRules';
 import type { DataModelSpecification } from './DataModel';
 import type { ErrorHandlingSpecification } from './ErrorModel';
+import type { SecuritySpecification } from './SecurityModel';
+import type { DeploymentSpecification } from './DeploymentModel';
+import type { ObservabilitySpecification } from './ObservabilityModel';
+import type { PerformanceSpecification } from './PerformanceModel';
 
 export type ProjectPhase =
     | 'requirementsSpec'
@@ -62,6 +66,18 @@ export interface DesignDocument {
 
     // Phase 3.7: Error Handling (TIER 2 Fas 2)
     errorHandling?: ErrorHandlingSpecification;
+
+    // Phase 3.8: Security (TIER 3)
+    security?: SecuritySpecification;
+
+    // Phase 3.9: Deployment (TIER 3)
+    deployment?: DeploymentSpecification;
+
+    // Phase 3.10: Observability (TIER 3)
+    observability?: ObservabilitySpecification;
+
+    // Phase 3.11: Performance (TIER 3)
+    performance?: PerformanceSpecification;
 
     // Phase 4: Validation
     validation?: {

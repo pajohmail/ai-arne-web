@@ -26,6 +26,11 @@ export interface IDesignArchitectService {
     generateBusinessRules(document: DesignDocument): Promise<DesignDocument>;
     generateDatabaseSchema(document: DesignDocument): Promise<DesignDocument>;
     generateErrorTaxonomy(document: DesignDocument): Promise<DesignDocument>;
+    // TIER 3 Improvements
+    generateSecuritySpec(document: DesignDocument): Promise<DesignDocument>;
+    generateDeploymentSpec(document: DesignDocument): Promise<DesignDocument>;
+    generateObservabilitySpec(document: DesignDocument): Promise<DesignDocument>;
+    generatePerformanceSpec(document: DesignDocument): Promise<DesignDocument>;
 }
 
 export class DesignArchitectService implements IDesignArchitectService {
@@ -922,5 +927,167 @@ ${req.qualityRequirements?.map(qr => `- ${qr.category}: ${qr.description}`).join
         mermaid += '  Unknown --> Return500[Return 500]\n';
 
         return mermaid;
+    }
+
+    // TIER 3: Generate Security Specification (Threat Model + Auth/Authz)
+    async generateSecuritySpec(document: DesignDocument): Promise<DesignDocument> {
+        if (!document.requirementsSpec) {
+            throw new ValidationError('Requirements specification is required for security spec generation', {
+                documentId: document.id
+            });
+        }
+
+        if (!document.analysis || !document.analysis.useCases) {
+            throw new ValidationError('Use cases are required for security spec generation', {
+                documentId: document.id
+            });
+        }
+
+        const prompt = PromptFactory.createSecuritySpecPrompt(
+            document.requirementsSpec,
+            document.analysis.useCases,
+            document.apiDesign?.openApiSpec,
+            document.dataModel?.databaseSchema
+        );
+
+        const result = await this.vertexRepo.generateText(prompt);
+
+        try {
+            // Parse JSON response
+            const cleanJson = result.replace(/```json/g, '').replace(/```/g, '').trim();
+            const securitySpec = JSON.parse(cleanJson);
+
+            document.security = securitySpec;
+            document.updatedAt = new Date();
+
+            return document;
+        } catch (error) {
+            console.error('Failed to generate security specification:', error);
+            throw new ValidationError('Failed to generate valid security specification', {
+                documentId: document.id,
+                error: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
+    }
+
+    // TIER 3: Generate Deployment Specification (Docker + K8s + CI/CD)
+    async generateDeploymentSpec(document: DesignDocument): Promise<DesignDocument> {
+        if (!document.techStack) {
+            throw new ValidationError('Tech stack is required for deployment spec generation', {
+                documentId: document.id
+            });
+        }
+
+        if (!document.requirementsSpec) {
+            throw new ValidationError('Requirements specification is required for deployment spec generation', {
+                documentId: document.id
+            });
+        }
+
+        const prompt = PromptFactory.createDeploymentSpecPrompt(
+            document.techStack,
+            document.requirementsSpec,
+            document.systemDesign?.architectureDiagramMermaid
+        );
+
+        const result = await this.vertexRepo.generateText(prompt);
+
+        try {
+            // Parse JSON response
+            const cleanJson = result.replace(/```json/g, '').replace(/```/g, '').trim();
+            const deploymentSpec = JSON.parse(cleanJson);
+
+            document.deployment = deploymentSpec;
+            document.updatedAt = new Date();
+
+            return document;
+        } catch (error) {
+            console.error('Failed to generate deployment specification:', error);
+            throw new ValidationError('Failed to generate valid deployment specification', {
+                documentId: document.id,
+                error: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
+    }
+
+    // TIER 3: Generate Observability Specification (Logging + Metrics + Tracing)
+    async generateObservabilitySpec(document: DesignDocument): Promise<DesignDocument> {
+        if (!document.techStack) {
+            throw new ValidationError('Tech stack is required for observability spec generation', {
+                documentId: document.id
+            });
+        }
+
+        if (!document.requirementsSpec) {
+            throw new ValidationError('Requirements specification is required for observability spec generation', {
+                documentId: document.id
+            });
+        }
+
+        const prompt = PromptFactory.createObservabilitySpecPrompt(
+            document.techStack,
+            document.requirementsSpec,
+            document.apiDesign?.openApiSpec
+        );
+
+        const result = await this.vertexRepo.generateText(prompt);
+
+        try {
+            // Parse JSON response
+            const cleanJson = result.replace(/```json/g, '').replace(/```/g, '').trim();
+            const observabilitySpec = JSON.parse(cleanJson);
+
+            document.observability = observabilitySpec;
+            document.updatedAt = new Date();
+
+            return document;
+        } catch (error) {
+            console.error('Failed to generate observability specification:', error);
+            throw new ValidationError('Failed to generate valid observability specification', {
+                documentId: document.id,
+                error: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
+    }
+
+    // TIER 3: Generate Performance Specification (Caching + Optimization + Scaling)
+    async generatePerformanceSpec(document: DesignDocument): Promise<DesignDocument> {
+        if (!document.requirementsSpec) {
+            throw new ValidationError('Requirements specification is required for performance spec generation', {
+                documentId: document.id
+            });
+        }
+
+        if (!document.techStack) {
+            throw new ValidationError('Tech stack is required for performance spec generation', {
+                documentId: document.id
+            });
+        }
+
+        const prompt = PromptFactory.createPerformanceSpecPrompt(
+            document.requirementsSpec,
+            document.techStack,
+            document.dataModel?.databaseSchema,
+            document.apiDesign?.openApiSpec
+        );
+
+        const result = await this.vertexRepo.generateText(prompt);
+
+        try {
+            // Parse JSON response
+            const cleanJson = result.replace(/```json/g, '').replace(/```/g, '').trim();
+            const performanceSpec = JSON.parse(cleanJson);
+
+            document.performance = performanceSpec;
+            document.updatedAt = new Date();
+
+            return document;
+        } catch (error) {
+            console.error('Failed to generate performance specification:', error);
+            throw new ValidationError('Failed to generate valid performance specification', {
+                documentId: document.id,
+                error: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
     }
 }

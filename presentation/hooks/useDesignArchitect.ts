@@ -314,6 +314,78 @@ export function useDesignArchitect() {
         }
     };
 
+    // TIER 3: Security Specification
+    const generateSecuritySpec = async (
+        document: DesignDocument
+    ): Promise<DesignDocument> => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const service = getService();
+            return await service.generateSecuritySpec(document);
+        } catch (err) {
+            const error = err instanceof Error ? err : new Error('Failed to generate Security Specification');
+            setError(error);
+            throw error;
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // TIER 3: Deployment Specification
+    const generateDeploymentSpec = async (
+        document: DesignDocument
+    ): Promise<DesignDocument> => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const service = getService();
+            return await service.generateDeploymentSpec(document);
+        } catch (err) {
+            const error = err instanceof Error ? err : new Error('Failed to generate Deployment Specification');
+            setError(error);
+            throw error;
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // TIER 3: Observability Specification
+    const generateObservabilitySpec = async (
+        document: DesignDocument
+    ): Promise<DesignDocument> => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const service = getService();
+            return await service.generateObservabilitySpec(document);
+        } catch (err) {
+            const error = err instanceof Error ? err : new Error('Failed to generate Observability Specification');
+            setError(error);
+            throw error;
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // TIER 3: Performance Specification
+    const generatePerformanceSpec = async (
+        document: DesignDocument
+    ): Promise<DesignDocument> => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const service = getService();
+            return await service.generatePerformanceSpec(document);
+        } catch (err) {
+            const error = err instanceof Error ? err : new Error('Failed to generate Performance Specification');
+            setError(error);
+            throw error;
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     return {
         isLoading,
         error,
@@ -337,5 +409,10 @@ export function useDesignArchitect() {
         // TIER 2 Fas 2 Improvements
         generateDatabaseSchema,
         generateErrorTaxonomy,
+        // TIER 3 Improvements
+        generateSecuritySpec,
+        generateDeploymentSpec,
+        generateObservabilitySpec,
+        generatePerformanceSpec,
     };
 }

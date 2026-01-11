@@ -865,4 +865,1392 @@ export class PromptFactory {
         - Ensure sensitive data is not logged
         `;
     }
+
+    // TIER 3: Security Specification (Threat Model + Auth/Authz)
+    static createSecuritySpecPrompt(
+        requirements: any,
+        useCases: any[],
+        apiSpec?: string,
+        dataModel?: any
+    ): string {
+        return `
+        Generate a comprehensive security specification for this system.
+
+        REQUIREMENTS:
+        ${JSON.stringify(requirements, null, 2)}
+
+        USE CASES:
+        ${JSON.stringify(useCases, null, 2)}
+
+        ${apiSpec ? `API SPECIFICATION:\n${apiSpec.substring(0, 2000)}` : ''}
+
+        ${dataModel ? `DATA MODEL:\n${JSON.stringify(dataModel, null, 2).substring(0, 1000)}` : ''}
+
+        INSTRUCTIONS:
+        Generate a complete SecuritySpecification with:
+
+        1. AUTHENTICATION STRATEGY:
+           - Choose appropriate auth type (JWT, OAuth2, Session, SAML, etc.)
+           - Specify token storage and session duration
+           - MFA requirements and password policy
+           - Consider: user types, SSO needs, mobile/web clients
+
+        2. AUTHORIZATION MODEL:
+           - Design RBAC/ABAC/ACL model
+           - Define roles and permissions
+           - Create permission matrix
+           - Specify resource hierarchy if needed
+
+        3. THREAT MODEL (STRIDE):
+           - Identify assets (data, services, infrastructure)
+           - List threats in each category:
+             * Spoofing (identity theft)
+             * Tampering (data modification)
+             * Repudiation (deny actions)
+             * Information Disclosure (data leakage)
+             * Denial of Service
+             * Elevation of Privilege
+           - Assign likelihood and impact
+           - Include CWE IDs for common vulnerabilities
+
+        4. SECURITY CONTROLS:
+           - Map to OWASP Top 10
+           - Input validation, output encoding
+           - CSRF, XSS, SQL injection prevention
+           - Rate limiting, DDoS protection
+           - Secure headers (CSP, HSTS, etc.)
+
+        5. DATA PROTECTION:
+           - Encryption at rest (algorithm, key size)
+           - Encryption in transit (TLS 1.3)
+           - Key management strategy
+           - Data classification (Public, Internal, Confidential, Restricted)
+           - PII handling and GDPR compliance
+
+        6. ATTACK SURFACE:
+           - List all entry points (API, UI, Database, etc.)
+           - Identify trust boundaries
+           - Map data flows with sensitivity levels
+
+        Return JSON matching SecuritySpecification interface.
+
+        EXAMPLE OUTPUT:
+        {
+            "authenticationStrategy": {
+                "type": "JWT",
+                "provider": "Custom",
+                "tokenStorage": "Cookie",
+                "sessionDuration": 1440,
+                "refreshStrategy": "Sliding",
+                "mfaRequired": true,
+                "mfaMethod": "TOTP",
+                "passwordPolicy": {
+                    "minLength": 12,
+                    "requireUppercase": true,
+                    "requireLowercase": true,
+                    "requireNumbers": true,
+                    "requireSpecialChars": true,
+                    "expirationDays": 90,
+                    "preventReuse": 5
+                }
+            },
+            "authorizationModel": {
+                "type": "RBAC",
+                "roles": [
+                    {
+                        "id": "admin",
+                        "name": "Administrator",
+                        "description": "Full system access",
+                        "permissions": ["user:*", "system:*"]
+                    },
+                    {
+                        "id": "user",
+                        "name": "Regular User",
+                        "description": "Standard user access",
+                        "permissions": ["profile:read", "profile:write"]
+                    }
+                ]
+            },
+            "threatModel": {
+                "methodology": "STRIDE",
+                "assetInventory": [
+                    {
+                        "id": "asset-1",
+                        "name": "User Credentials",
+                        "type": "Data",
+                        "sensitivity": "Restricted",
+                        "description": "User passwords and authentication tokens"
+                    }
+                ],
+                "threats": [
+                    {
+                        "id": "threat-1",
+                        "category": "Spoofing",
+                        "name": "Credential Theft via Phishing",
+                        "description": "Attacker tricks users into revealing credentials",
+                        "likelihood": "Medium",
+                        "impact": "High",
+                        "riskLevel": "High",
+                        "affectedAssets": ["asset-1"],
+                        "affectedComponents": ["Login System"],
+                        "attackVector": "Social Engineering",
+                        "cweId": "CWE-287"
+                    },
+                    {
+                        "id": "threat-2",
+                        "category": "InformationDisclosure",
+                        "name": "SQL Injection Data Leak",
+                        "description": "Attacker extracts sensitive data via SQL injection",
+                        "likelihood": "Low",
+                        "impact": "Critical",
+                        "riskLevel": "High",
+                        "affectedAssets": ["asset-1"],
+                        "affectedComponents": ["Database Layer"],
+                        "cweId": "CWE-89",
+                        "cvssScore": 9.8
+                    }
+                ],
+                "mitigations": [
+                    {
+                        "id": "mit-1",
+                        "name": "Implement MFA",
+                        "description": "Require TOTP-based MFA for all users",
+                        "implementationType": "Preventive",
+                        "status": "Planned",
+                        "mitigatesThreats": ["threat-1"],
+                        "cost": "Medium",
+                        "effectiveness": "High"
+                    },
+                    {
+                        "id": "mit-2",
+                        "name": "Parameterized Queries",
+                        "description": "Use prepared statements for all database queries",
+                        "implementationType": "Preventive",
+                        "status": "Planned",
+                        "mitigatesThreats": ["threat-2"],
+                        "cost": "Low",
+                        "effectiveness": "High"
+                    }
+                ],
+                "attackSurface": {
+                    "entryPoints": [
+                        {
+                            "id": "ep-1",
+                            "name": "REST API",
+                            "type": "API",
+                            "authentication": true,
+                            "encryption": true,
+                            "rateLimit": true,
+                            "exposedTo": "Public"
+                        }
+                    ],
+                    "trustBoundaries": [
+                        {
+                            "id": "tb-1",
+                            "name": "DMZ to Internal Network",
+                            "inside": ["Application Server", "Database"],
+                            "outside": ["Load Balancer", "WAF"],
+                            "description": "Firewall separates public-facing and internal components"
+                        }
+                    ],
+                    "dataFlows": [
+                        {
+                            "id": "df-1",
+                            "from": "Client Browser",
+                            "to": "API Gateway",
+                            "data": "User Credentials",
+                            "protocol": "HTTPS",
+                            "encrypted": true,
+                            "authenticated": false,
+                            "sensitivity": "Restricted"
+                        }
+                    ]
+                }
+            },
+            "securityControls": [
+                {
+                    "id": "sc-1",
+                    "name": "Input Validation",
+                    "category": "ApplicationSecurity",
+                    "type": "Preventive",
+                    "implementation": "Validate all user inputs using whitelist approach",
+                    "owaspMapping": ["A03:2021 - Injection"],
+                    "status": "Planned"
+                }
+            ],
+            "dataProtection": {
+                "encryptionAtRest": {
+                    "enabled": true,
+                    "algorithm": "AES-256-GCM",
+                    "keySize": 256,
+                    "provider": "AWS KMS"
+                },
+                "encryptionInTransit": {
+                    "enabled": true,
+                    "algorithm": "TLS 1.3",
+                    "keySize": 2048
+                },
+                "keyManagement": {
+                    "storage": "KMS",
+                    "rotationPeriod": 90,
+                    "backupStrategy": "Automated daily backups to secure vault"
+                },
+                "dataClassification": [
+                    {
+                        "level": "Restricted",
+                        "dataTypes": ["password", "ssn", "creditCard"],
+                        "retentionPeriod": 730,
+                        "accessRestrictions": ["Admin", "Security Team"],
+                        "encryptionRequired": true,
+                        "auditLoggingRequired": true
+                    }
+                ],
+                "piiHandling": {
+                    "identification": ["email", "name", "address", "phone"],
+                    "minimization": true,
+                    "anonymization": "Hashing with salt for analytics",
+                    "pseudonymization": "UUID-based user IDs",
+                    "rightToErasure": true,
+                    "dataPortability": true
+                }
+            },
+            "completed": true
+        }
+
+        IMPORTANT:
+        - Use industry standards (OWASP, NIST, ISO 27001)
+        - Be specific about algorithms, key sizes, protocols
+        - Consider compliance requirements (GDPR, HIPAA, PCI-DSS if applicable)
+        - Prioritize threats by risk level
+        - Provide actionable mitigations
+        `;
+    }
+
+    // TIER 3: Deployment Specification (Docker + K8s + CI/CD)
+    static createDeploymentSpecPrompt(
+        techStack: any,
+        requirements: any,
+        systemDesign?: string
+    ): string {
+        const backend = techStack?.backend?.name || 'Unknown';
+        const database = techStack?.database?.name || 'Unknown';
+        const hosting = techStack?.hosting?.name || 'Unknown';
+
+        return `
+        Generate a comprehensive deployment specification for this system.
+
+        TECH STACK:
+        - Backend: ${backend}
+        - Database: ${database}
+        - Hosting: ${hosting}
+        - Full Stack: ${JSON.stringify(techStack, null, 2)}
+
+        REQUIREMENTS:
+        ${JSON.stringify(requirements, null, 2)}
+
+        ${systemDesign ? `SYSTEM DESIGN:\n${systemDesign.substring(0, 1000)}` : ''}
+
+        INSTRUCTIONS:
+        Generate a complete DeploymentSpecification with:
+
+        1. CONTAINERIZATION (Docker):
+           - Create Dockerfile for each service
+           - Base image selection (official, alpine, slim)
+           - Multi-stage builds for optimization
+           - Environment variables and secrets
+           - Health checks
+           - Resource limits
+
+        2. ORCHESTRATION (Kubernetes):
+           - Deployment manifests with replicas
+           - Service definitions (ClusterIP, LoadBalancer)
+           - ConfigMaps and Secrets
+           - Ingress with TLS
+           - HPA (Horizontal Pod Autoscaling)
+           - Resource requests/limits
+           - Liveness/Readiness probes
+
+        3. CI/CD PIPELINE:
+           - Detect platform from tech stack (GitHub Actions, GitLab CI, etc.)
+           - Stages: Build → Test → Security Scan → Deploy
+           - Automated testing
+           - Container image building
+           - Image registry push
+           - Deployment to environments (dev, staging, prod)
+           - Rollback strategy
+
+        4. ENVIRONMENTS:
+           - Development (minimal resources)
+           - Staging (production-like)
+           - Production (scaled, redundant)
+           - Environment-specific configs
+
+        Return JSON matching DeploymentSpecification interface.
+
+        EXAMPLE OUTPUT (shortened):
+        {
+            "containerization": {
+                "enabled": true,
+                "platform": "Docker",
+                "services": [
+                    {
+                        "name": "api",
+                        "baseImage": "node:20-alpine",
+                        "dockerfile": "FROM node:20-alpine\\nWORKDIR /app\\nCOPY package*.json ./\\nRUN npm ci --production\\nCOPY . .\\nEXPOSE 3000\\nHEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 CMD node healthcheck.js\\nCMD [\\"node\\", \\"server.js\\"]",
+                        "buildContext": ".",
+                        "exposedPorts": [3000],
+                        "environmentVariables": [
+                            {
+                                "name": "NODE_ENV",
+                                "value": "production"
+                            },
+                            {
+                                "name": "DATABASE_URL",
+                                "valueFrom": "secret",
+                                "secretName": "db-credentials"
+                            }
+                        ],
+                        "volumes": [],
+                        "healthCheck": {
+                            "type": "http",
+                            "endpoint": "/health",
+                            "interval": 30,
+                            "timeout": 3,
+                            "retries": 3,
+                            "startPeriod": 5
+                        },
+                        "resources": {
+                            "requests": {
+                                "cpu": "100m",
+                                "memory": "128Mi"
+                            },
+                            "limits": {
+                                "cpu": "500m",
+                                "memory": "512Mi"
+                            }
+                        }
+                    }
+                ]
+            },
+            "orchestration": {
+                "platform": "Kubernetes",
+                "version": "1.28",
+                "deployments": [
+                    {
+                        "name": "api",
+                        "namespace": "production",
+                        "replicas": 3,
+                        "selector": {
+                            "app": "api"
+                        },
+                        "template": {
+                            "labels": {
+                                "app": "api",
+                                "version": "v1"
+                            },
+                            "containers": [
+                                {
+                                    "name": "api",
+                                    "image": "registry.example.com/api:latest",
+                                    "imagePullPolicy": "Always",
+                                    "ports": [
+                                        {
+                                            "name": "http",
+                                            "containerPort": 3000,
+                                            "protocol": "TCP"
+                                        }
+                                    ],
+                                    "env": [],
+                                    "volumeMounts": [],
+                                    "resources": {
+                                        "requests": {
+                                            "cpu": "100m",
+                                            "memory": "128Mi"
+                                        },
+                                        "limits": {
+                                            "cpu": "500m",
+                                            "memory": "512Mi"
+                                        }
+                                    },
+                                    "livenessProbe": {
+                                        "httpGet": {
+                                            "path": "/health",
+                                            "port": 3000,
+                                            "scheme": "HTTP"
+                                        },
+                                        "initialDelaySeconds": 10,
+                                        "periodSeconds": 10,
+                                        "timeoutSeconds": 3,
+                                        "successThreshold": 1,
+                                        "failureThreshold": 3
+                                    }
+                                }
+                            ],
+                            "restartPolicy": "Always"
+                        },
+                        "strategy": {
+                            "type": "RollingUpdate",
+                            "rollingUpdate": {
+                                "maxSurge": "25%",
+                                "maxUnavailable": "0"
+                            }
+                        },
+                        "autoscaling": {
+                            "enabled": true,
+                            "minReplicas": 2,
+                            "maxReplicas": 10,
+                            "metrics": [
+                                {
+                                    "type": "cpu",
+                                    "targetAverageUtilization": 70
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "services": [
+                    {
+                        "name": "api-service",
+                        "namespace": "production",
+                        "type": "ClusterIP",
+                        "selector": {
+                            "app": "api"
+                        },
+                        "ports": [
+                            {
+                                "name": "http",
+                                "port": 80,
+                                "targetPort": 3000,
+                                "protocol": "TCP"
+                            }
+                        ]
+                    }
+                ],
+                "configMaps": [
+                    {
+                        "name": "app-config",
+                        "namespace": "production",
+                        "data": {
+                            "LOG_LEVEL": "info",
+                            "FEATURE_FLAGS": "newUI:true"
+                        }
+                    }
+                ],
+                "secrets": [
+                    {
+                        "name": "db-credentials",
+                        "namespace": "production",
+                        "type": "Opaque",
+                        "data": ["DATABASE_URL", "DATABASE_PASSWORD"]
+                    }
+                ],
+                "namespaces": ["development", "staging", "production"]
+            },
+            "cicd": {
+                "platform": "GitHub Actions",
+                "stages": [
+                    {
+                        "name": "Build and Test",
+                        "jobs": [
+                            {
+                                "name": "build",
+                                "runsOn": "ubuntu-latest",
+                                "steps": [
+                                    {
+                                        "name": "Checkout code",
+                                        "type": "action",
+                                        "action": "actions/checkout@v4"
+                                    },
+                                    {
+                                        "name": "Setup Node.js",
+                                        "type": "action",
+                                        "action": "actions/setup-node@v4",
+                                        "with": {
+                                            "node-version": "20"
+                                        }
+                                    },
+                                    {
+                                        "name": "Install dependencies",
+                                        "type": "script",
+                                        "script": "npm ci"
+                                    },
+                                    {
+                                        "name": "Run tests",
+                                        "type": "script",
+                                        "script": "npm test"
+                                    },
+                                    {
+                                        "name": "Build Docker image",
+                                        "type": "script",
+                                        "script": "docker build -t api:latest ."
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "name": "Deploy to Production",
+                        "jobs": [
+                            {
+                                "name": "deploy",
+                                "runsOn": "ubuntu-latest",
+                                "environment": "production",
+                                "steps": [
+                                    {
+                                        "name": "Deploy to Kubernetes",
+                                        "type": "script",
+                                        "script": "kubectl apply -f k8s/"
+                                    }
+                                ]
+                            }
+                        ],
+                        "condition": "github.ref == 'refs/heads/main'"
+                    }
+                ],
+                "triggers": [
+                    {
+                        "type": "push",
+                        "branches": ["main", "develop"]
+                    },
+                    {
+                        "type": "pull_request",
+                        "branches": ["main"]
+                    }
+                ],
+                "secrets": ["DOCKER_REGISTRY_TOKEN", "KUBECONFIG"]
+            },
+            "environments": [
+                {
+                    "name": "development",
+                    "url": "https://dev.example.com",
+                    "variables": {
+                        "NODE_ENV": "development",
+                        "LOG_LEVEL": "debug"
+                    },
+                    "secrets": ["DATABASE_URL"],
+                    "resources": {
+                        "cpu": "200m",
+                        "memory": "256Mi",
+                        "storage": "1Gi",
+                        "replicas": 1
+                    }
+                },
+                {
+                    "name": "production",
+                    "url": "https://example.com",
+                    "variables": {
+                        "NODE_ENV": "production",
+                        "LOG_LEVEL": "info"
+                    },
+                    "secrets": ["DATABASE_URL", "API_KEYS"],
+                    "resources": {
+                        "cpu": "1000m",
+                        "memory": "2Gi",
+                        "storage": "10Gi",
+                        "replicas": 3
+                    },
+                    "approvalRequired": true
+                }
+            ],
+            "completed": true
+        }
+
+        IMPORTANT:
+        - Use multi-stage Docker builds for smaller images
+        - Set appropriate resource requests/limits
+        - Implement health checks for reliability
+        - Use secrets for sensitive data, not env vars
+        - Enable autoscaling based on CPU/memory
+        - Implement zero-downtime deployments (RollingUpdate)
+        `;
+    }
+
+    // TIER 3: Observability Specification (Logging + Metrics + Tracing + Alerting)
+    static createObservabilitySpecPrompt(
+        techStack: any,
+        requirements: any,
+        apiSpec?: string
+    ): string {
+        const backend = techStack?.backend?.name || 'Unknown';
+        const hosting = techStack?.hosting?.name || 'Unknown';
+
+        return `
+        Generate a comprehensive observability specification for this system.
+
+        TECH STACK:
+        - Backend: ${backend}
+        - Hosting: ${hosting}
+        - Full Stack: ${JSON.stringify(techStack, null, 2)}
+
+        QUALITY REQUIREMENTS:
+        ${JSON.stringify(requirements?.qualityRequirements || [], null, 2)}
+
+        ${apiSpec ? `API ENDPOINTS:\n${apiSpec.substring(0, 1500)}` : ''}
+
+        INSTRUCTIONS:
+        Generate a complete ObservabilitySpecification with:
+
+        1. LOGGING:
+           - Select framework based on backend (Winston/Pino for Node.js, Logback for Java, etc.)
+           - Structured JSON logging
+           - Log levels (TRACE, DEBUG, INFO, WARN, ERROR, FATAL)
+           - Destinations (Console, Elasticsearch, CloudWatch, Datadog, etc.)
+           - Context fields (requestId, userId, traceId, environment)
+           - Sampling for high-volume logs
+           - Sensitive data redaction (passwords, tokens, PII)
+           - Retention policies by level
+
+        2. METRICS:
+           - Choose framework (Prometheus, StatsD, OpenTelemetry, Micrometer)
+           - System metrics (CPU, memory, disk, network)
+           - Application metrics (request rate, latency, error rate)
+           - Business metrics (orders per minute, revenue, conversions)
+           - Custom metrics per endpoint
+           - Exporters (Prometheus, CloudWatch, Datadog, etc.)
+
+        3. TRACING:
+           - Enable distributed tracing (OpenTelemetry, Jaeger, Zipkin)
+           - Sampling rate (0.1 = 10%)
+           - Trace context propagation (W3C, B3, Jaeger)
+           - Span processors and exporters
+
+        4. ALERTING:
+           - Alert rules based on metrics
+           - Severity levels (Critical, High, Medium, Low)
+           - Notification channels (Email, Slack, PagerDuty, Webhook)
+           - Escalation policies
+           - Common alerts: high error rate, high latency, service down, disk full
+
+        5. DASHBOARDS:
+           - Grafana/Kibana dashboards
+           - Panels for key metrics
+           - SLO tracking
+           - Real-time and historical views
+
+        6. SLOs (Service Level Objectives):
+           - Define SLIs (Service Level Indicators)
+           - Set SLO targets (e.g., 99.9% availability, p95 latency < 200ms)
+           - Error budget calculation
+
+        Return JSON matching ObservabilitySpecification interface.
+
+        EXAMPLE OUTPUT:
+        {
+            "logging": {
+                "framework": "Winston",
+                "levels": ["INFO", "WARN", "ERROR", "FATAL"],
+                "structuredLogging": true,
+                "destinations": [
+                    {
+                        "type": "Console",
+                        "config": {
+                            "format": "json"
+                        }
+                    },
+                    {
+                        "type": "Elasticsearch",
+                        "config": {
+                            "node": "https://elasticsearch.example.com",
+                            "index": "app-logs",
+                            "auth": {
+                                "username": "elastic",
+                                "password": "secret"
+                            }
+                        },
+                        "filter": {
+                            "minLevel": "INFO"
+                        }
+                    }
+                ],
+                "contextFields": ["requestId", "userId", "traceId", "environment", "service"],
+                "sampling": {
+                    "enabled": true,
+                    "rate": 0.1,
+                    "rules": [
+                        {
+                            "condition": "level === 'DEBUG'",
+                            "rate": 0.01
+                        }
+                    ]
+                },
+                "retention": {
+                    "trace": 1,
+                    "debug": 3,
+                    "info": 7,
+                    "warn": 30,
+                    "error": 90,
+                    "fatal": 365
+                },
+                "sensitiveDataHandling": {
+                    "redactFields": ["password", "token", "apiKey", "ssn", "creditCard"],
+                    "maskFields": ["email", "phone"],
+                    "hashFields": ["userId", "sessionId"],
+                    "piiDetection": true
+                }
+            },
+            "metrics": {
+                "framework": "Prometheus",
+                "collectionInterval": 15,
+                "exporters": [
+                    {
+                        "type": "Prometheus",
+                        "endpoint": "/metrics"
+                    }
+                ],
+                "customMetrics": [
+                    {
+                        "name": "http_request_duration_seconds",
+                        "type": "Histogram",
+                        "description": "HTTP request latency in seconds",
+                        "unit": "seconds",
+                        "labels": ["method", "endpoint", "status"],
+                        "aggregation": "avg"
+                    },
+                    {
+                        "name": "http_requests_total",
+                        "type": "Counter",
+                        "description": "Total HTTP requests",
+                        "labels": ["method", "endpoint", "status"]
+                    },
+                    {
+                        "name": "active_connections",
+                        "type": "Gauge",
+                        "description": "Number of active connections"
+                    }
+                ],
+                "systemMetrics": {
+                    "cpu": true,
+                    "memory": true,
+                    "disk": true,
+                    "network": true,
+                    "processMetrics": true,
+                    "runtimeMetrics": true
+                },
+                "businessMetrics": [
+                    {
+                        "name": "orders_per_minute",
+                        "description": "Number of orders placed per minute",
+                        "calculation": "rate(orders_total[1m])",
+                        "threshold": 100,
+                        "alertOnThreshold": true
+                    }
+                ]
+            },
+            "tracing": {
+                "enabled": true,
+                "framework": "OpenTelemetry",
+                "samplingRate": 0.1,
+                "exporters": [
+                    {
+                        "type": "Jaeger",
+                        "endpoint": "http://jaeger-collector:14268/api/traces"
+                    }
+                ],
+                "propagation": "W3C",
+                "spanProcessors": [
+                    {
+                        "type": "BatchSpanProcessor",
+                        "maxQueueSize": 2048,
+                        "maxExportBatchSize": 512,
+                        "exportTimeout": 30000
+                    }
+                ]
+            },
+            "alerting": {
+                "provider": "Prometheus Alertmanager",
+                "rules": [
+                    {
+                        "id": "alert-1",
+                        "name": "HighErrorRate",
+                        "severity": "Critical",
+                        "condition": "rate(http_requests_total{status=~\"5..\"}[5m]) > 0.05",
+                        "threshold": 0.05,
+                        "duration": 300,
+                        "annotations": {
+                            "summary": "High error rate detected",
+                            "description": "Error rate is above 5% for 5 minutes"
+                        },
+                        "labels": {
+                            "team": "backend"
+                        },
+                        "notificationChannels": ["slack", "pagerduty"],
+                        "enabled": true
+                    },
+                    {
+                        "id": "alert-2",
+                        "name": "HighLatency",
+                        "severity": "High",
+                        "condition": "histogram_quantile(0.95, http_request_duration_seconds) > 1",
+                        "threshold": 1,
+                        "duration": 300,
+                        "annotations": {
+                            "summary": "High latency detected",
+                            "description": "P95 latency is above 1 second"
+                        },
+                        "notificationChannels": ["slack"],
+                        "enabled": true
+                    },
+                    {
+                        "id": "alert-3",
+                        "name": "ServiceDown",
+                        "severity": "Critical",
+                        "condition": "up{job=\"api\"} == 0",
+                        "duration": 60,
+                        "annotations": {
+                            "summary": "Service is down",
+                            "description": "API service is not responding"
+                        },
+                        "notificationChannels": ["slack", "pagerduty", "email"],
+                        "enabled": true
+                    }
+                ],
+                "notificationChannels": [
+                    {
+                        "id": "slack",
+                        "type": "Slack",
+                        "target": "https://hooks.slack.com/services/xxx/yyy/zzz"
+                    },
+                    {
+                        "id": "pagerduty",
+                        "type": "PagerDuty",
+                        "target": "integration-key-here"
+                    },
+                    {
+                        "id": "email",
+                        "type": "Email",
+                        "target": "oncall@example.com"
+                    }
+                ],
+                "escalationPolicies": [
+                    {
+                        "id": "critical-escalation",
+                        "name": "Critical Alert Escalation",
+                        "steps": [
+                            {
+                                "delay": 0,
+                                "notificationChannels": ["slack", "pagerduty"]
+                            },
+                            {
+                                "delay": 15,
+                                "notificationChannels": ["email"]
+                            }
+                        ]
+                    }
+                ]
+            },
+            "dashboards": [
+                {
+                    "id": "main-dashboard",
+                    "name": "Application Overview",
+                    "description": "Main application metrics and health",
+                    "provider": "Grafana",
+                    "panels": [
+                        {
+                            "id": "panel-1",
+                            "title": "Request Rate",
+                            "type": "Graph",
+                            "query": "rate(http_requests_total[5m])",
+                            "visualization": "Timeseries",
+                            "position": {
+                                "x": 0,
+                                "y": 0,
+                                "width": 12,
+                                "height": 8
+                            },
+                            "unit": "req/s"
+                        },
+                        {
+                            "id": "panel-2",
+                            "title": "Error Rate",
+                            "type": "Graph",
+                            "query": "rate(http_requests_total{status=~\"5..\"}[5m])",
+                            "visualization": "Timeseries",
+                            "position": {
+                                "x": 12,
+                                "y": 0,
+                                "width": 12,
+                                "height": 8
+                            },
+                            "thresholds": [
+                                {
+                                    "value": 0.01,
+                                    "color": "yellow",
+                                    "label": "Warning"
+                                },
+                                {
+                                    "value": 0.05,
+                                    "color": "red",
+                                    "label": "Critical"
+                                }
+                            ],
+                            "unit": "errors/s"
+                        }
+                    ],
+                    "refreshInterval": 30,
+                    "timeRange": "1h"
+                }
+            ],
+            "slos": {
+                "slis": [
+                    {
+                        "id": "sli-availability",
+                        "name": "Availability",
+                        "description": "Percentage of successful requests",
+                        "query": "sum(rate(http_requests_total{status!~\"5..\"}[5m])) / sum(rate(http_requests_total[5m]))",
+                        "unit": "percentage"
+                    },
+                    {
+                        "id": "sli-latency",
+                        "name": "Latency",
+                        "description": "95th percentile request latency",
+                        "query": "histogram_quantile(0.95, http_request_duration_seconds)",
+                        "unit": "seconds"
+                    }
+                ],
+                "slos": [
+                    {
+                        "id": "slo-availability",
+                        "name": "99.9% Availability",
+                        "sliId": "sli-availability",
+                        "target": 99.9,
+                        "window": "30d",
+                        "alertOnBreach": true
+                    },
+                    {
+                        "id": "slo-latency",
+                        "name": "P95 Latency < 200ms",
+                        "sliId": "sli-latency",
+                        "target": 0.2,
+                        "window": "7d",
+                        "threshold": 0.2,
+                        "alertOnBreach": true
+                    }
+                ]
+            },
+            "completed": true
+        }
+
+        IMPORTANT:
+        - Use structured JSON logging for machine-readable logs
+        - Implement correlation IDs for request tracing
+        - Set appropriate retention policies to manage costs
+        - Redact sensitive data (PII, credentials) from logs
+        - Define meaningful metrics that map to business KPIs
+        - Set realistic SLO targets based on requirements
+        - Create actionable alerts (avoid alert fatigue)
+        `;
+    }
+
+    // TIER 3: Performance Specification (Caching + Optimization + Scaling)
+    static createPerformanceSpecPrompt(
+        requirements: any,
+        techStack: any,
+        dataModel?: any,
+        apiSpec?: string
+    ): string {
+        return `
+        Generate a comprehensive performance specification for this system.
+
+        QUALITY REQUIREMENTS:
+        ${JSON.stringify(requirements?.qualityRequirements || [], null, 2)}
+
+        TECH STACK:
+        ${JSON.stringify(techStack, null, 2)}
+
+        ${dataModel ? `DATABASE SCHEMA:\n${JSON.stringify(dataModel, null, 2).substring(0, 1500)}` : ''}
+
+        ${apiSpec ? `API ENDPOINTS:\n${apiSpec.substring(0, 1500)}` : ''}
+
+        INSTRUCTIONS:
+        Generate a complete PerformanceSpecification with:
+
+        1. SLOs (Service Level Objectives):
+           - Extract from quality requirements
+           - Latency (p50, p95, p99)
+           - Availability (uptime %)
+           - Throughput (requests/second)
+           - Error rate (%)
+           - Define realistic targets
+
+        2. CACHING STRATEGY:
+           - Multi-layer caching (Browser → CDN → Application → Database)
+           - Cache types: Memory (Node-cache), Redis, Memcached, HTTP caching
+           - TTL (Time to Live) per resource
+           - Eviction policies (LRU, LFU, FIFO)
+           - Invalidation strategies (TTL, Event-driven, Manual)
+           - Cache warming for popular data
+           - Coherence strategy (Strong, Eventual, Weak)
+
+        3. DATABASE OPTIMIZATION:
+           - Indexes (BTREE, HASH, GIN, GIST) based on query patterns
+           - Query optimization techniques
+           - Connection pooling (min, max, timeout)
+           - Partitioning strategy if needed
+           - Read replicas for scaling
+           - Denormalization rules if beneficial
+
+        4. API OPTIMIZATION:
+           - Rate limiting (per IP, per user, per API key)
+           - Pagination (offset, cursor, keyset)
+           - Compression (gzip, brotli)
+           - Batch endpoints for bulk operations
+           - GraphQL optimization (query depth, complexity, DataLoader)
+
+        5. LOAD PROFILE:
+           - Expected traffic (requests/sec, concurrent users)
+           - Peak traffic patterns
+           - Traffic distribution (by endpoint, region, user type)
+           - User behavior (session duration, pages per session)
+
+        6. SCALING STRATEGY:
+           - Horizontal scaling (stateless, load balancing)
+           - Vertical scaling (resource limits)
+           - Auto-scaling (metrics, thresholds, cooldown)
+           - Capacity planning (current, projected growth, bottlenecks)
+
+        Return JSON matching PerformanceSpecification interface.
+
+        EXAMPLE OUTPUT:
+        {
+            "slos": [
+                {
+                    "id": "slo-latency-p95",
+                    "metric": "Latency",
+                    "target": 200,
+                    "unit": "ms",
+                    "percentile": 95,
+                    "window": "5m",
+                    "description": "95% of requests should complete within 200ms"
+                },
+                {
+                    "id": "slo-availability",
+                    "metric": "Availability",
+                    "target": 99.9,
+                    "unit": "%",
+                    "window": "30d",
+                    "description": "Service should be available 99.9% of the time"
+                },
+                {
+                    "id": "slo-throughput",
+                    "metric": "Throughput",
+                    "target": 1000,
+                    "unit": "requests/s",
+                    "window": "1m",
+                    "description": "System should handle 1000 requests per second"
+                }
+            ],
+            "cachingStrategy": {
+                "enabled": true,
+                "layers": [
+                    {
+                        "name": "CDN Cache",
+                        "level": "CDN",
+                        "type": "CDN",
+                        "ttl": 86400,
+                        "evictionPolicy": "TTL",
+                        "cachedResources": [
+                            {
+                                "resource": "static-assets",
+                                "keys": ["*.js", "*.css", "*.png", "*.jpg"],
+                                "ttl": 2592000
+                            }
+                        ]
+                    },
+                    {
+                        "name": "Redis Cache",
+                        "level": "Application",
+                        "type": "Redis",
+                        "ttl": 300,
+                        "maxSize": "2GB",
+                        "evictionPolicy": "LRU",
+                        "cachedResources": [
+                            {
+                                "resource": "user-profile",
+                                "keys": ["user:{id}"],
+                                "ttl": 600
+                            },
+                            {
+                                "resource": "product-catalog",
+                                "keys": ["products:list", "product:{id}"],
+                                "ttl": 1800
+                            }
+                        ],
+                        "config": {
+                            "host": "redis.example.com",
+                            "port": 6379,
+                            "maxRetriesPerRequest": 3
+                        }
+                    },
+                    {
+                        "name": "ORM Cache",
+                        "level": "Database",
+                        "type": "ORM",
+                        "ttl": 60,
+                        "evictionPolicy": "LRU",
+                        "cachedResources": [
+                            {
+                                "resource": "lookup-tables",
+                                "keys": ["categories", "tags"],
+                                "ttl": 3600
+                            }
+                        ]
+                    }
+                ],
+                "invalidationStrategy": {
+                    "type": "Hybrid",
+                    "events": [
+                        {
+                            "eventType": "user.updated",
+                            "invalidates": ["user:{id}", "user:{id}:*"]
+                        },
+                        {
+                            "eventType": "product.updated",
+                            "invalidates": ["product:{id}", "products:list"]
+                        }
+                    ]
+                },
+                "cacheWarming": {
+                    "enabled": true,
+                    "schedule": "0 */6 * * *",
+                    "resources": ["product-catalog", "categories"],
+                    "strategy": "eager"
+                },
+                "coherence": {
+                    "type": "Eventual",
+                    "synchronization": "Invalidate"
+                }
+            },
+            "databaseOptimization": {
+                "indexing": {
+                    "indexes": [
+                        {
+                            "table": "users",
+                            "columns": ["email"],
+                            "type": "BTREE",
+                            "unique": true,
+                            "rationale": "Fast lookup for authentication"
+                        },
+                        {
+                            "table": "orders",
+                            "columns": ["user_id", "created_at"],
+                            "type": "BTREE",
+                            "unique": false,
+                            "rationale": "Optimize user order history queries"
+                        },
+                        {
+                            "table": "products",
+                            "columns": ["category_id", "price"],
+                            "type": "BTREE",
+                            "unique": false,
+                            "rationale": "Fast filtering by category and price range"
+                        }
+                    ],
+                    "autoAnalyze": true,
+                    "recommendations": [
+                        "Add covering index on (user_id, created_at, status) for order queries",
+                        "Consider GIN index on JSON columns if using JSONB"
+                    ]
+                },
+                "queryOptimization": [
+                    {
+                        "queryId": "q1",
+                        "originalQuery": "SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC",
+                        "optimizedQuery": "SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC LIMIT 100",
+                        "technique": "Pagination",
+                        "expectedImprovement": "90% faster for large result sets",
+                        "rationale": "Limit result set to prevent full table scan"
+                    }
+                ],
+                "connectionPooling": {
+                    "enabled": true,
+                    "minConnections": 2,
+                    "maxConnections": 20,
+                    "acquireTimeout": 30000,
+                    "idleTimeout": 600000,
+                    "maxLifetime": 1800000,
+                    "strategy": "dynamic"
+                }
+            },
+            "apiOptimization": {
+                "rateLimiting": {
+                    "enabled": true,
+                    "strategy": "Token Bucket",
+                    "limits": [
+                        {
+                            "endpoint": "/api/auth/login",
+                            "limit": 5,
+                            "window": 300,
+                            "scope": "IP"
+                        },
+                        {
+                            "endpoint": "*",
+                            "limit": 1000,
+                            "window": 3600,
+                            "scope": "User"
+                        }
+                    ],
+                    "storage": "Redis"
+                },
+                "pagination": {
+                    "type": "Cursor",
+                    "defaultPageSize": 20,
+                    "maxPageSize": 100,
+                    "cursorEncoding": "base64"
+                },
+                "compression": {
+                    "enabled": true,
+                    "algorithms": ["br", "gzip"],
+                    "minSize": 1024,
+                    "contentTypes": ["application/json", "text/html", "text/css", "application/javascript"]
+                },
+                "batchEndpoints": [
+                    {
+                        "path": "/api/batch",
+                        "maxBatchSize": 50,
+                        "timeout": 30000,
+                        "parallelExecution": true
+                    }
+                ]
+            },
+            "loadProfile": {
+                "expectedLoad": {
+                    "requestsPerSecond": 500,
+                    "concurrentUsers": 1000,
+                    "avgResponseTime": 150,
+                    "peakTime": "09:00-17:00 weekdays"
+                },
+                "peakLoad": {
+                    "requestsPerSecond": 2000,
+                    "concurrentUsers": 5000,
+                    "avgResponseTime": 200,
+                    "peakTime": "Black Friday, Cyber Monday"
+                },
+                "trafficDistribution": {
+                    "byEndpoint": [
+                        {
+                            "endpoint": "/api/products",
+                            "percentage": 40,
+                            "avgLatency": 100
+                        },
+                        {
+                            "endpoint": "/api/orders",
+                            "percentage": 30,
+                            "avgLatency": 200
+                        }
+                    ]
+                },
+                "userBehavior": {
+                    "avgSessionDuration": 15,
+                    "pagesPerSession": 8,
+                    "bounceRate": 35,
+                    "conversionRate": 2.5
+                }
+            },
+            "scalingStrategy": {
+                "horizontal": {
+                    "enabled": true,
+                    "minInstances": 2,
+                    "maxInstances": 20,
+                    "stateless": true,
+                    "loadBalancing": {
+                        "algorithm": "LeastConnections",
+                        "healthCheck": {
+                            "enabled": true,
+                            "endpoint": "/health",
+                            "interval": 30,
+                            "timeout": 5,
+                            "unhealthyThreshold": 3,
+                            "healthyThreshold": 2
+                        }
+                    }
+                },
+                "vertical": {
+                    "enabled": false,
+                    "resources": {
+                        "cpu": {
+                            "current": "2 cores",
+                            "max": "8 cores"
+                        },
+                        "memory": {
+                            "current": "4GB",
+                            "max": "16GB"
+                        }
+                    }
+                },
+                "autoScaling": {
+                    "enabled": true,
+                    "metrics": [
+                        {
+                            "name": "cpu",
+                            "threshold": 70,
+                            "comparisonOperator": ">",
+                            "evaluationPeriods": 2
+                        },
+                        {
+                            "name": "memory",
+                            "threshold": 80,
+                            "comparisonOperator": ">",
+                            "evaluationPeriods": 2
+                        }
+                    ],
+                    "cooldownPeriod": 300,
+                    "scaleUpPolicy": {
+                        "adjustment": 2,
+                        "adjustmentType": "ChangeInCapacity"
+                    },
+                    "scaleDownPolicy": {
+                        "adjustment": 1,
+                        "adjustmentType": "ChangeInCapacity"
+                    }
+                },
+                "capacityPlanning": {
+                    "currentCapacity": {
+                        "cpu": 60,
+                        "memory": 70,
+                        "storage": 40,
+                        "network": 30,
+                        "database": 50
+                    },
+                    "projectedGrowth": {
+                        "timeframe": "6 months",
+                        "expectedGrowth": 50,
+                        "requiredCapacity": {
+                            "cpu": 90,
+                            "memory": 90,
+                            "storage": 60,
+                            "network": 45,
+                            "database": 75
+                        }
+                    },
+                    "bottlenecks": [
+                        {
+                            "component": "Database",
+                            "metric": "Connections",
+                            "currentValue": 45,
+                            "threshold": 50,
+                            "impact": "High",
+                            "mitigation": "Increase connection pool size or add read replicas"
+                        }
+                    ],
+                    "recommendations": [
+                        "Scale horizontally to 4-6 instances",
+                        "Add Redis cluster for distributed caching",
+                        "Implement database read replicas"
+                    ]
+                }
+            },
+            "completed": true
+        }
+
+        IMPORTANT:
+        - Set realistic SLOs based on requirements (don't over-engineer)
+        - Use multi-layer caching for frequently accessed data
+        - Index columns used in WHERE, JOIN, ORDER BY clauses
+        - Implement rate limiting to prevent abuse
+        - Use cursor-based pagination for large datasets
+        - Enable compression for API responses
+        - Plan for 2-3x expected peak load
+        - Monitor and adjust based on actual usage
+        `;
+    }
 }
