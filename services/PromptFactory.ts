@@ -180,18 +180,173 @@ export class PromptFactory {
         1. For each Use Case, identify which classes and methods support it.
         2. Identify any missing functionality (Use Cases not supported by the design).
         3. Identify any unnecessary complexity (Classes/Methods not tracing back to a Use Case).
-        
+
         Return the result as a Markdown report with the following sections:
         - ## Traceability Matrix (Table)
         - ## Missing Requirements
         - ## Unnecessary Components
         - ## Overall Quality Score (1-10)
-        
+
         Use Cases:
         ${JSON.stringify(useCases)}
-        
+
         Class Diagram:
         ${classDiagram}
+        `;
+    }
+
+    // Gherkin BDD Scenarios Generation
+    static createGherkinPrompt(useCase: UseCase, requirements?: any): string {
+        const reqContext = requirements ? `\n\nREQUIREMENTS CONTEXT:\n${JSON.stringify(requirements, null, 2)}\n` : '';
+
+        return `
+        Convert this use case to Gherkin BDD scenarios.
+        Generate comprehensive test scenarios using Given-When-Then format.
+        ${reqContext}
+
+        USE CASE:
+        - Title: ${useCase.title}
+        - Narrative: ${useCase.narrative}
+        - Actors: ${useCase.actors.join(', ')}
+
+        INSTRUCTIONS:
+        1. Generate 3-5 scenarios covering:
+           - Happy path (successful execution)
+           - Edge cases (boundary conditions)
+           - Error conditions (validation failures, exceptions)
+        2. Use proper Gherkin syntax:
+           - Feature: [description]
+           - Scenario: [description]
+           - Given [preconditions]
+           - When [action]
+           - Then [expected outcome]
+           - And [additional conditions/outcomes]
+        3. Include data tables where appropriate
+        4. Make scenarios executable and testable
+
+        Return a JSON array with this structure:
+        [
+            {
+                "feature": "Feature name/description",
+                "scenario": "Scenario name",
+                "steps": "Given...\\nWhen...\\nThen...\\nAnd..."
+            }
+        ]
+        `;
+    }
+
+    // OpenAPI Specification Generation
+    static createApiSpecPrompt(useCases: UseCase[], domainModel: string, techStack?: any): string {
+        const backend = techStack?.backend?.name || 'REST API';
+
+        return `
+        Generate an OpenAPI 3.0 specification based on the use cases and domain model.
+
+        USE CASES:
+        ${JSON.stringify(useCases, null, 2)}
+
+        DOMAIN MODEL:
+        ${domainModel}
+
+        BACKEND TECHNOLOGY:
+        ${backend}
+
+        INSTRUCTIONS:
+        1. For each use case, define appropriate REST endpoints:
+           - HTTP method (GET, POST, PUT, DELETE, PATCH)
+           - Path with resource naming (e.g., /users, /users/{id})
+           - Path parameters, query parameters
+        2. Define request/response schemas using JSON Schema:
+           - Request body schema (for POST, PUT, PATCH)
+           - Response schemas for success (200, 201, 204)
+           - Error responses (400, 401, 403, 404, 500)
+        3. Include:
+           - Operation summaries and descriptions
+           - Authentication/security schemes (bearerAuth, apiKey, etc.)
+           - Example request/response payloads
+           - Content types (application/json)
+        4. Follow RESTful conventions
+        5. Derive schemas from domain model entities
+
+        Return ONLY the complete OpenAPI YAML specification, wrapped in \`\`\`yaml blocks.
+        Start with:
+        openapi: 3.0.0
+        info:
+          title: [Project Name] API
+          version: 1.0.0
+        `;
+    }
+
+    // Requirements Traceability Matrix Generation
+    static createTraceabilityPrompt(
+        requirements: any,
+        useCases: UseCase[],
+        classDiagram: string,
+        apiSpec?: string
+    ): string {
+        const apiContext = apiSpec ? `\n\nAPI SPECIFICATION:\n${apiSpec}\n` : '';
+
+        return `
+        Generate a comprehensive Requirements Traceability Matrix (RTM).
+        Map each requirement to use cases, design elements, and test scenarios.
+        ${apiContext}
+
+        REQUIREMENTS:
+        ${JSON.stringify(requirements, null, 2)}
+
+        USE CASES:
+        ${JSON.stringify(useCases, null, 2)}
+
+        CLASS DIAGRAM:
+        ${classDiagram}
+
+        INSTRUCTIONS:
+        1. For each requirement, assign a unique ID:
+           - Functional: REQ-FR-001, REQ-FR-002, etc.
+           - Quality: REQ-QR-001, REQ-QR-002, etc.
+           - Constraint: REQ-CR-001, REQ-CR-002, etc.
+        2. Trace each requirement to:
+           - Related use case IDs
+           - Implementing classes (from class diagram)
+           - Implementing methods (from class diagram)
+           - API endpoints (if API spec provided)
+           - Test scenarios (Gherkin scenarios if available)
+        3. Determine coverage status:
+           - "covered": Full implementation found
+           - "partial": Some implementation found
+           - "missing": No implementation found
+        4. Calculate coverage statistics:
+           - Total requirements count
+           - Implemented count
+           - Coverage percentage
+           - List untraced requirements
+           - List unnecessary components (not traced to any requirement)
+
+        Return JSON with this structure:
+        {
+            "requirements": [
+                {
+                    "requirementId": "REQ-FR-001",
+                    "requirementType": "functional",
+                    "description": "...",
+                    "useCases": ["UC-001"],
+                    "designElements": {
+                        "classes": ["User", "UserService"],
+                        "methods": ["createUser", "validateUser"],
+                        "apiEndpoints": ["/users POST"]
+                    },
+                    "testScenarios": ["User registration happy path"],
+                    "status": "covered"
+                }
+            ],
+            "coverage": {
+                "totalRequirements": 10,
+                "implementedRequirements": 8,
+                "coveragePercentage": 80,
+                "untracedRequirements": ["REQ-FR-009", "REQ-FR-010"],
+                "unnecessaryComponents": ["HelperClass.unusedMethod"]
+            }
+        }
         `;
     }
 }

@@ -6,9 +6,11 @@ import { ProjectWizard } from '@/presentation/components/wizard/ProjectWizard';
 import { ApiKeySettings } from '@/presentation/components/settings/ApiKeySettings';
 import { DesignDocument } from '@/core/models/DesignDocument';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function Dashboard() {
     const { user, signOut } = useAuth();
+    const router = useRouter();
     const [showSettings, setShowSettings] = useState(false);
 
     return (
@@ -21,6 +23,12 @@ export default function Dashboard() {
                                 <h1 className="text-xl font-bold text-gray-900">SirenOOP Dashboard</h1>
                             </div>
                             <div className="flex items-center gap-4">
+                                <button
+                                    onClick={() => router.push('/editor')}
+                                    className="px-4 py-2 text-sm bg-purple-600 text-white hover:bg-purple-700 rounded-lg transition-colors"
+                                >
+                                    📝 Manual Editor
+                                </button>
                                 <button
                                     onClick={() => setShowSettings(!showSettings)}
                                     className="px-4 py-2 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"

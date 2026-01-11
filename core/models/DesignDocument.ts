@@ -25,7 +25,15 @@ export interface DesignDocument {
         completed: boolean;
     };
 
-    // Phase 2: System Design
+    // Phase 2.5: API Design
+    apiDesign?: {
+        openApiSpec: string; // YAML/JSON OpenAPI 3.x specification
+        asyncApiSpec?: string; // Optional AsyncAPI specification
+        apiDocumentation: string; // Generated API documentation
+        completed: boolean;
+    };
+
+    // Phase 3: System Design
     systemDesign?: {
         architectureDiagramMermaid: string; // e.g., Package diagram
         subsystems: string[];
@@ -48,6 +56,7 @@ export interface DesignDocument {
         exportUrl?: string;
         generatedReport?: string;
         reportGeneratedAt?: Date;
+        traceabilityMatrix?: TraceabilityMatrix;
     };
 
     createdAt: Date;
@@ -59,6 +68,13 @@ export interface UseCase {
     title: string;
     narrative: string; // Textual description
     actors: string[];
+    gherkinScenarios?: GherkinScenario[];
+}
+
+export interface GherkinScenario {
+    feature: string;
+    scenario: string;
+    steps: string; // Full Gherkin text (Given-When-Then)
 }
 
 export interface GlossaryTerm {
@@ -68,8 +84,25 @@ export interface GlossaryTerm {
 
 export interface OperationContract {
     operation: string;
-    preConditions: string[];
-    postConditions: string[];
+    preConditions: Condition[];
+    postConditions: Condition[];
+    invariants?: Condition[];
+    exceptions?: ExceptionSpec[];
+}
+
+export interface Condition {
+    type: 'state' | 'authentication' | 'authorization' | 'validation' | 'business_rule';
+    description: string;
+    expression?: string; // Pseudo-code or expression
+    severity: 'MUST' | 'SHOULD' | 'MAY';
+}
+
+export interface ExceptionSpec {
+    name: string;
+    condition: string;
+    httpStatus?: number;
+    errorCode?: string;
+    message: string;
 }
 
 export interface ReviewComment {
@@ -142,4 +175,35 @@ export interface TechChoice {
     name: string;
     category: string;
     reasoning: string;
+}
+
+// Requirements Traceability Matrix (RTM)
+export interface TraceabilityMatrix {
+    requirements: RequirementTrace[];
+    coverage: CoverageStats;
+}
+
+export interface RequirementTrace {
+    requirementId: string;
+    requirementType: 'functional' | 'quality' | 'constraint';
+    description: string;
+    useCases: string[]; // Use Case IDs
+    designElements: DesignElementMap;
+    testScenarios?: string[]; // Gherkin scenario IDs
+    status: 'covered' | 'partial' | 'missing';
+}
+
+export interface DesignElementMap {
+    classes: string[];
+    methods: string[];
+    interfaces?: string[];
+    apiEndpoints?: string[];
+}
+
+export interface CoverageStats {
+    totalRequirements: number;
+    implementedRequirements: number;
+    coveragePercentage: number;
+    untracedRequirements: string[];
+    unnecessaryComponents: string[];
 }

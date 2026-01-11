@@ -189,6 +189,59 @@ export function useDesignArchitect() {
         }
     };
 
+    // TIER 1 Improvements
+    const generateGherkinScenarios = async (
+        useCase: any,
+        requirements?: any
+    ): Promise<any[]> => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const service = getService();
+            return await service.generateGherkinScenarios(useCase, requirements);
+        } catch (err) {
+            const error = err instanceof Error ? err : new Error('Failed to generate Gherkin scenarios');
+            setError(error);
+            throw error;
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const generateApiSpecification = async (
+        document: DesignDocument
+    ): Promise<DesignDocument> => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const service = getService();
+            return await service.generateApiSpecification(document);
+        } catch (err) {
+            const error = err instanceof Error ? err : new Error('Failed to generate API specification');
+            setError(error);
+            throw error;
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const generateTraceabilityMatrix = async (
+        document: DesignDocument
+    ): Promise<DesignDocument> => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const service = getService();
+            return await service.generateTraceabilityMatrix(document);
+        } catch (err) {
+            const error = err instanceof Error ? err : new Error('Failed to generate Traceability Matrix');
+            setError(error);
+            throw error;
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     return {
         isLoading,
         error,
@@ -202,5 +255,9 @@ export function useDesignArchitect() {
         generateObjectDesign,
         validateDesign,
         generateReport,
+        // TIER 1 Improvements
+        generateGherkinScenarios,
+        generateApiSpecification,
+        generateTraceabilityMatrix,
     };
 }

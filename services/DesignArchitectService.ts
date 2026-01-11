@@ -1,4 +1,4 @@
-import { DesignDocument } from "@/core/models/DesignDocument";
+import { DesignDocument, UseCase, GherkinScenario } from "@/core/models/DesignDocument";
 import { IVertexAIRepository } from "@/repositories/interfaces/IVertexAIRepository";
 import { PromptFactory } from "./PromptFactory";
 import { ValidationError } from "@/core/errors/ApplicationErrors";
@@ -17,6 +17,10 @@ export interface IDesignArchitectService {
     generateObjectDesign(document: DesignDocument): Promise<DesignDocument>;
     validateDesign(document: DesignDocument): Promise<DesignDocument>;
     generateFinalReport(document: DesignDocument): Promise<string>;
+    // TIER 1 Improvements
+    generateGherkinScenarios(useCase: UseCase, requirements?: any): Promise<GherkinScenario[]>;
+    generateApiSpecification(document: DesignDocument): Promise<DesignDocument>;
+    generateTraceabilityMatrix(document: DesignDocument): Promise<DesignDocument>;
 }
 
 export class DesignArchitectService implements IDesignArchitectService {
@@ -463,5 +467,122 @@ ${req.qualityRequirements?.map(qr => `- ${qr.category}: ${qr.description}`).join
         }
 
         return report;
+    }
+
+    // Generate Gherkin BDD scenarios for use cases
+    async generateGherkinScenarios(
+        useCase: UseCase,
+        requirements?: any
+    ): Promise<GherkinScenario[]> {
+        const prompt = PromptFactory.createGherkinPrompt(useCase, requirements);
+        const result = await this.vertexRepo.generateText(prompt);
+
+        try {
+            // Clean up code blocks if present
+            const cleanJson = result.replace(/```json/g, '').replace(/```/g, '').trim();
+            const parsed = JSON.parse(cleanJson);
+
+            // Validate that it's an array
+            if (!Array.isArray(parsed)) {
+                throw new Error('Expected array of Gherkin scenarios');
+            }
+
+            return parsed as GherkinScenario[];
+        } catch (error) {
+            console.error('Failed to parse Gherkin scenarios:', error);
+            // Return empty array on failure
+            return [];
+        }
+    }
+
+    // Generate OpenAPI specification
+    async generateApiSpecification(document: DesignDocument): Promise<DesignDocument> {
+        if (!document.analysis || !document.analysis.useCases || document.analysis.useCases.length === 0) {
+            throw new ValidationError('Use cases are required for API specification generation', {
+                documentId: document.id,
+            });
+        }
+
+        const prompt = PromptFactory.createApiSpecPrompt(
+            document.analysis.useCases,
+            document.analysis.domainModelMermaid || '',
+            document.techStack
+        );
+
+        const result = await this.vertexRepo.generateText(prompt);
+
+        // Extract YAML from code blocks
+        const yamlMatch = result.match(/```yaml([\s\S]*?)```/);
+        const openApiSpec = yamlMatch ? yamlMatch[1].trim() : result.trim();
+
+        // Initialize apiDesign if not exists
+        if (!document.apiDesign) {
+            document.apiDesign = {
+                openApiSpec: '',
+                apiDocumentation: '',
+                completed: false
+            };
+        }
+
+        document.apiDesign.openApiSpec = openApiSpec;
+        document.apiDesign.apiDocumentation = `OpenAPI 3.0 specification with ${document.analysis.useCases.length} endpoints`;
+        document.apiDesign.completed = true;
+        document.updatedAt = new Date();
+
+        return document;
+    }
+
+    // Generate Requirements Traceability Matrix
+    async generateTraceabilityMatrix(document: DesignDocument): Promise<DesignDocument> {
+        if (!document.requirementsSpec) {
+            throw new ValidationError('Requirements specification is required for RTM generation', {
+                documentId: document.id,
+            });
+        }
+
+        if (!document.analysis || !document.objectDesign) {
+            throw new ValidationError('Analysis and Object Design are required for RTM generation', {
+                documentId: document.id,
+            });
+        }
+
+        const prompt = PromptFactory.createTraceabilityPrompt(
+            document.requirementsSpec,
+            document.analysis.useCases,
+            document.objectDesign.classDiagramMermaid,
+            document.apiDesign?.openApiSpec
+        );
+
+        const result = await this.vertexRepo.generateText(prompt);
+
+        try {
+            // Clean up code blocks if present
+            const cleanJson = result.replace(/```json/g, '').replace(/```/g, '').trim();
+            const parsed = JSON.parse(cleanJson);
+
+            // Validate structure
+            if (!parsed.requirements || !parsed.coverage) {
+                throw new Error('Invalid RTM structure');
+            }
+
+            // Initialize validation if not exists
+            if (!document.validation) {
+                document.validation = {
+                    reviews: [],
+                    isApproved: false
+                };
+            }
+
+            document.validation.traceabilityMatrix = parsed;
+            document.updatedAt = new Date();
+
+            return document;
+        } catch (error) {
+            console.error('Failed to parse Traceability Matrix:', error);
+            throw new ValidationError('Failed to generate valid Traceability Matrix', {
+                documentId: document.id,
+                error: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
     }
 }
