@@ -1,5 +1,7 @@
 import type { AlgorithmSpecification } from './AlgorithmSpecification';
 import type { BusinessRulesSpecification } from './BusinessRules';
+import type { DataModelSpecification } from './DataModel';
+import type { ErrorHandlingSpecification } from './ErrorModel';
 
 export type ProjectPhase =
     | 'requirementsSpec'
@@ -54,6 +56,12 @@ export interface DesignDocument {
 
     // Phase 3.5: Business Rules (TIER 2)
     businessRules?: BusinessRulesSpecification;
+
+    // Phase 3.6: Data Model (TIER 2 Fas 2)
+    dataModel?: DataModelSpecification;
+
+    // Phase 3.7: Error Handling (TIER 2 Fas 2)
+    errorHandling?: ErrorHandlingSpecification;
 
     // Phase 4: Validation
     validation?: {

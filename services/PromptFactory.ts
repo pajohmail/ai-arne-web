@@ -533,4 +533,336 @@ export class PromptFactory {
         - Rules should be mutually exclusive for UNIQUE hit policy
         `;
     }
+
+    // TIER 2 Fas 2: Database Schema Generation
+    static createDatabaseSchemaPrompt(
+        domainModel: string,
+        classDiagram: string,
+        techStack: any
+    ): string {
+        const dbType = techStack?.database?.name || 'PostgreSQL';
+        const ormFramework = techStack?.backend?.name?.includes('TypeScript') || techStack?.backend?.name?.includes('Node')
+            ? 'TypeORM'
+            : techStack?.backend?.name?.includes('Python')
+            ? 'SQLAlchemy'
+            : 'Prisma';
+
+        return `
+        Generate a complete database schema specification from the domain model.
+
+        DATABASE TYPE: ${dbType}
+        ORM FRAMEWORK: ${ormFramework}
+
+        DOMAIN MODEL (Mermaid):
+        ${domainModel}
+
+        CLASS DIAGRAM (Mermaid):
+        ${classDiagram}
+
+        INSTRUCTIONS:
+        1. Convert each domain class to a database table:
+           - Map class name to table name (plural, snake_case convention)
+           - Map attributes to columns with appropriate SQL data types
+           - Identify primary keys (usually 'id')
+           - Add timestamps (created_at, updated_at) where appropriate
+
+        2. Define relationships:
+           - OneToMany → foreign key in target table
+           - ManyToOne → foreign key in source table
+           - ManyToMany → create junction table
+           - Specify CASCADE behavior for foreign keys
+
+        3. Create indexes:
+           - Primary key indexes (automatic)
+           - Foreign key indexes (for query performance)
+           - Unique constraints where needed
+           - Consider indexes on frequently queried columns
+
+        4. Generate ORM entity mappings:
+           - Decorators/annotations for ${ormFramework}
+           - Relationship mappings with cascade options
+           - Validation rules
+
+        5. Include migration strategy:
+           - Initial schema creation DDL
+           - Version control approach
+
+        SQL DATA TYPE MAPPING:
+        - String → VARCHAR(255) or TEXT
+        - Number/Integer → INTEGER or BIGINT
+        - Decimal/Float → DECIMAL(10,2) or FLOAT
+        - Boolean → BOOLEAN
+        - Date/DateTime → TIMESTAMP or DATETIME
+        - UUID → UUID or VARCHAR(36)
+        - JSON → JSON or JSONB
+
+        Return JSON with this structure:
+        {
+            "databaseSchema": {
+                "tables": [
+                    {
+                        "name": "users",
+                        "schema": "public",
+                        "columns": [
+                            {
+                                "name": "id",
+                                "type": "UUID",
+                                "nullable": false,
+                                "autoIncrement": false,
+                                "unique": true,
+                                "comment": "Primary key"
+                            },
+                            {
+                                "name": "email",
+                                "type": "VARCHAR",
+                                "length": 255,
+                                "nullable": false,
+                                "unique": true
+                            },
+                            {
+                                "name": "created_at",
+                                "type": "TIMESTAMP",
+                                "nullable": false,
+                                "defaultValue": "CURRENT_TIMESTAMP"
+                            }
+                        ],
+                        "primaryKey": ["id"],
+                        "uniqueConstraints": [
+                            {"name": "unique_email", "columns": ["email"]}
+                        ]
+                    }
+                ],
+                "relationships": [
+                    {
+                        "name": "user_orders",
+                        "type": "OneToMany",
+                        "sourceTable": "users",
+                        "targetTable": "orders",
+                        "sourceColumn": "id",
+                        "targetColumn": "user_id"
+                    }
+                ],
+                "indexes": [
+                    {
+                        "name": "idx_users_email",
+                        "table": "users",
+                        "columns": ["email"],
+                        "unique": true,
+                        "type": "BTREE"
+                    }
+                ],
+                "ormConfig": {
+                    "framework": "${ormFramework}",
+                    "entities": [
+                        {
+                            "className": "User",
+                            "tableName": "users",
+                            "properties": [
+                                {
+                                    "propertyName": "id",
+                                    "columnName": "id",
+                                    "type": "string",
+                                    "nullable": false
+                                },
+                                {
+                                    "propertyName": "orders",
+                                    "columnName": null,
+                                    "type": "Order[]",
+                                    "nullable": false,
+                                    "relation": {
+                                        "type": "OneToMany",
+                                        "targetEntity": "Order",
+                                        "inverseProperty": "user",
+                                        "cascadeActions": ["persist", "remove"]
+                                    }
+                                }
+                            ]
+                        }
+                    ],
+                    "connectionConfig": {
+                        "database": "project_db",
+                        "host": "localhost",
+                        "port": 5432,
+                        "ssl": false
+                    }
+                }
+            },
+            "completed": true
+        }
+
+        IMPORTANT:
+        - Follow naming conventions: tables (snake_case, plural), columns (snake_case)
+        - Always include primary keys
+        - Add foreign key constraints with appropriate CASCADE rules
+        - Include indexes for foreign keys and frequently queried columns
+        - Generate complete ORM entity mappings
+        `;
+    }
+
+    // TIER 2 Fas 2: Error Taxonomy & Exception Hierarchy
+    static createErrorTaxonomyPrompt(
+        requirements: any,
+        useCases: UseCase[],
+        apiSpec?: string
+    ): string {
+        const apiContext = apiSpec ? `\n\nAPI SPECIFICATION:\n${apiSpec}\n` : '';
+
+        return `
+        Generate a comprehensive error taxonomy and exception hierarchy for this system.
+
+        REQUIREMENTS:
+        ${JSON.stringify(requirements, null, 2)}
+
+        USE CASES:
+        ${JSON.stringify(useCases, null, 2)}
+        ${apiContext}
+
+        INSTRUCTIONS:
+        1. Design a hierarchical exception structure:
+           - Base exception class (e.g., ApplicationError)
+           - Category exceptions (ValidationError, AuthenticationError, etc.)
+           - Specific exceptions for each error case
+
+        2. Map exceptions to HTTP status codes:
+           - 400: Bad Request (validation errors)
+           - 401: Unauthorized (authentication failed)
+           - 403: Forbidden (authorization failed)
+           - 404: Not Found (resource doesn't exist)
+           - 409: Conflict (duplicate, concurrent modification)
+           - 422: Unprocessable Entity (semantic errors)
+           - 429: Too Many Requests (rate limiting)
+           - 500: Internal Server Error (unexpected errors)
+           - 503: Service Unavailable (dependency failures)
+
+        3. Define error codes:
+           - Use UPPER_SNAKE_CASE format
+           - Make them descriptive and unique
+           - Include both technical and user-friendly messages
+
+        4. Specify handling strategies:
+           - Retry: Temporary failures (network, timeouts)
+           - FailFast: Invalid input, authentication failures
+           - Fallback: Degraded mode when dependencies fail
+           - LogAndContinue: Non-critical errors
+           - Circuit Breaker: Repeated failures to external services
+
+        5. Configure retry logic where applicable:
+           - Max retry attempts
+           - Backoff strategy (Exponential, Linear, Jitter)
+           - Delay configuration
+
+        Return JSON with this structure:
+        {
+            "taxonomy": {
+                "baseExceptionClass": "ApplicationError",
+                "categories": [
+                    {
+                        "name": "ValidationError",
+                        "parentCategory": "ApplicationError",
+                        "exceptionClass": "ValidationError",
+                        "httpStatus": 400,
+                        "errorCodes": [
+                            {
+                                "code": "INVALID_EMAIL",
+                                "message": "Email format is invalid",
+                                "userMessage": "Please provide a valid email address",
+                                "recoverable": false,
+                                "logLevel": "WARN",
+                                "includeStackTrace": false
+                            },
+                            {
+                                "code": "MISSING_REQUIRED_FIELD",
+                                "message": "Required field is missing",
+                                "userMessage": "Please fill in all required fields",
+                                "recoverable": false,
+                                "logLevel": "WARN",
+                                "includeStackTrace": false
+                            }
+                        ],
+                        "handlingStrategy": "FailFast"
+                    },
+                    {
+                        "name": "AuthenticationError",
+                        "parentCategory": "ApplicationError",
+                        "exceptionClass": "AuthenticationError",
+                        "httpStatus": 401,
+                        "errorCodes": [
+                            {
+                                "code": "INVALID_CREDENTIALS",
+                                "message": "Username or password is incorrect",
+                                "userMessage": "Invalid login credentials",
+                                "recoverable": false,
+                                "logLevel": "WARN",
+                                "includeStackTrace": false
+                            },
+                            {
+                                "code": "TOKEN_EXPIRED",
+                                "message": "Authentication token has expired",
+                                "userMessage": "Your session has expired. Please log in again",
+                                "recoverable": true,
+                                "logLevel": "INFO",
+                                "includeStackTrace": false
+                            }
+                        ],
+                        "handlingStrategy": "FailFast"
+                    },
+                    {
+                        "name": "ExternalServiceError",
+                        "parentCategory": "ApplicationError",
+                        "exceptionClass": "ExternalServiceError",
+                        "httpStatus": 503,
+                        "errorCodes": [
+                            {
+                                "code": "DATABASE_CONNECTION_FAILED",
+                                "message": "Failed to connect to database",
+                                "userMessage": "Service temporarily unavailable",
+                                "recoverable": true,
+                                "logLevel": "ERROR",
+                                "includeStackTrace": true
+                            }
+                        ],
+                        "handlingStrategy": "Retry",
+                        "retryConfig": {
+                            "maxAttempts": 3,
+                            "backoffStrategy": "Exponential",
+                            "initialDelayMs": 1000,
+                            "maxDelayMs": 10000,
+                            "retryableHttpStatuses": [503, 504]
+                        }
+                    }
+                ],
+                "httpStatusMapping": [
+                    {
+                        "httpStatus": 400,
+                        "description": "Bad Request - Client sent invalid data",
+                        "errorCategories": ["ValidationError"],
+                        "examples": ["INVALID_EMAIL", "MISSING_REQUIRED_FIELD"]
+                    },
+                    {
+                        "httpStatus": 401,
+                        "description": "Unauthorized - Authentication required",
+                        "errorCategories": ["AuthenticationError"],
+                        "examples": ["INVALID_CREDENTIALS", "TOKEN_EXPIRED"]
+                    }
+                ],
+                "loggingStrategy": {
+                    "logErrors": true,
+                    "logWarnings": true,
+                    "includeRequestContext": true,
+                    "includeUserContext": true,
+                    "sanitizeSensitiveData": true,
+                    "sensitiveFields": ["password", "token", "creditCard", "ssn"]
+                }
+            },
+            "completed": true
+        }
+
+        IMPORTANT:
+        - Cover all major error scenarios from use cases
+        - Include both client errors (4xx) and server errors (5xx)
+        - Provide clear, actionable user messages
+        - Configure appropriate retry strategies for transient failures
+        - Ensure sensitive data is not logged
+        `;
+    }
 }

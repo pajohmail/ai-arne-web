@@ -278,6 +278,42 @@ export function useDesignArchitect() {
         }
     };
 
+    // TIER 2 Fas 2: Database Schema (DDL + ORM)
+    const generateDatabaseSchema = async (
+        document: DesignDocument
+    ): Promise<DesignDocument> => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const service = getService();
+            return await service.generateDatabaseSchema(document);
+        } catch (err) {
+            const error = err instanceof Error ? err : new Error('Failed to generate Database Schema');
+            setError(error);
+            throw error;
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // TIER 2 Fas 2: Error Taxonomy
+    const generateErrorTaxonomy = async (
+        document: DesignDocument
+    ): Promise<DesignDocument> => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const service = getService();
+            return await service.generateErrorTaxonomy(document);
+        } catch (err) {
+            const error = err instanceof Error ? err : new Error('Failed to generate Error Taxonomy');
+            setError(error);
+            throw error;
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     return {
         isLoading,
         error,
@@ -298,5 +334,8 @@ export function useDesignArchitect() {
         // TIER 2 Improvements
         generateAlgorithmSpecs,
         generateBusinessRules,
+        // TIER 2 Fas 2 Improvements
+        generateDatabaseSchema,
+        generateErrorTaxonomy,
     };
 }

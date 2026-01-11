@@ -21,6 +21,11 @@ export interface IDesignArchitectService {
     generateGherkinScenarios(useCase: UseCase, requirements?: any): Promise<GherkinScenario[]>;
     generateApiSpecification(document: DesignDocument): Promise<DesignDocument>;
     generateTraceabilityMatrix(document: DesignDocument): Promise<DesignDocument>;
+    // TIER 2 Improvements
+    generateAlgorithmSpecs(document: DesignDocument): Promise<DesignDocument>;
+    generateBusinessRules(document: DesignDocument): Promise<DesignDocument>;
+    generateDatabaseSchema(document: DesignDocument): Promise<DesignDocument>;
+    generateErrorTaxonomy(document: DesignDocument): Promise<DesignDocument>;
 }
 
 export class DesignArchitectService implements IDesignArchitectService {
@@ -679,5 +684,243 @@ ${req.qualityRequirements?.map(qr => `- ${qr.category}: ${qr.description}`).join
         document.updatedAt = new Date();
 
         return document;
+    }
+
+    // TIER 2 Fas 2: Generate Database Schema (DDL + ORM Mappings)
+    async generateDatabaseSchema(document: DesignDocument): Promise<DesignDocument> {
+        if (!document.analysis?.domainModelMermaid) {
+            throw new ValidationError('Domain model is required for database schema generation', {
+                documentId: document.id
+            });
+        }
+
+        if (!document.objectDesign?.classDiagramMermaid) {
+            throw new ValidationError('Class diagram is required for database schema generation', {
+                documentId: document.id
+            });
+        }
+
+        const prompt = PromptFactory.createDatabaseSchemaPrompt(
+            document.analysis.domainModelMermaid,
+            document.objectDesign.classDiagramMermaid,
+            document.techStack
+        );
+
+        const result = await this.vertexRepo.generateText(prompt);
+
+        try {
+            // Parse JSON response
+            const cleanJson = result.replace(/```json/g, '').replace(/```/g, '').trim();
+            const databaseSchema = JSON.parse(cleanJson);
+
+            // Generate ER diagram (optional, AI might include it)
+            let erDiagram = databaseSchema.erDiagram;
+            if (!erDiagram && databaseSchema.tables) {
+                // Generate simple ER diagram from tables
+                erDiagram = this.generateERDiagram(databaseSchema.tables, databaseSchema.relationships);
+            }
+
+            // Generate DDL script
+            const ddlScript = this.generateDDLScript(databaseSchema.tables, databaseSchema.indexes);
+
+            document.dataModel = {
+                databaseSchema,
+                erDiagram,
+                ddlScript,
+                completed: true
+            };
+
+            document.updatedAt = new Date();
+
+            return document;
+        } catch (error) {
+            console.error('Failed to generate database schema:', error);
+            throw new ValidationError('Failed to generate valid database schema', {
+                documentId: document.id,
+                error: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
+    }
+
+    // Helper: Generate ER diagram from database schema
+    private generateERDiagram(tables: any[], relationships: any[]): string {
+        let mermaid = 'erDiagram\n';
+
+        // Add tables with columns
+        tables.forEach(table => {
+            mermaid += `  ${table.name} {\n`;
+            table.columns.forEach((col: any) => {
+                const pk = table.primaryKey?.includes(col.name) ? ' PK' : '';
+                const fk = col.foreignKey ? ' FK' : '';
+                mermaid += `    ${col.type} ${col.name}${pk}${fk}\n`;
+            });
+            mermaid += `  }\n`;
+        });
+
+        // Add relationships
+        relationships?.forEach(rel => {
+            const card = rel.type === 'OneToMany' ? '||--o{' :
+                        rel.type === 'ManyToMany' ? '}o--o{' :
+                        rel.type === 'OneToOne' ? '||--||' : '||--o{';
+            mermaid += `  ${rel.sourceTable} ${card} ${rel.targetTable} : "${rel.name}"\n`;
+        });
+
+        return mermaid;
+    }
+
+    // Helper: Generate DDL SQL script
+    private generateDDLScript(tables: any[], indexes?: any[]): string {
+        let sql = '-- Database Schema DDL\n\n';
+
+        tables.forEach(table => {
+            sql += `CREATE TABLE ${table.name} (\n`;
+            const columnDefs = table.columns.map((col: any) => {
+                let def = `  ${col.name} ${col.type}`;
+                if (col.length) def += `(${col.length})`;
+                if (col.precision && col.scale) def += `(${col.precision},${col.scale})`;
+                if (!col.nullable) def += ' NOT NULL';
+                if (col.defaultValue !== undefined) def += ` DEFAULT ${col.defaultValue}`;
+                if (col.autoIncrement) def += ' AUTO_INCREMENT';
+                if (col.unique) def += ' UNIQUE';
+                return def;
+            });
+
+            sql += columnDefs.join(',\n');
+
+            // Primary key
+            if (table.primaryKey && table.primaryKey.length > 0) {
+                sql += `,\n  PRIMARY KEY (${table.primaryKey.join(', ')})`;
+            }
+
+            // Foreign keys
+            table.columns.forEach((col: any) => {
+                if (col.foreignKey) {
+                    sql += `,\n  FOREIGN KEY (${col.name}) REFERENCES ${col.foreignKey.table}(${col.foreignKey.column})`;
+                    sql += ` ON DELETE ${col.foreignKey.onDelete} ON UPDATE ${col.foreignKey.onUpdate}`;
+                }
+            });
+
+            sql += '\n);\n\n';
+        });
+
+        // Indexes
+        indexes?.forEach(idx => {
+            const unique = idx.unique ? 'UNIQUE ' : '';
+            sql += `CREATE ${unique}INDEX ${idx.name} ON ${idx.table} (${idx.columns.join(', ')});\n`;
+        });
+
+        return sql;
+    }
+
+    // TIER 2 Fas 2: Generate Error Taxonomy & Exception Hierarchy
+    async generateErrorTaxonomy(document: DesignDocument): Promise<DesignDocument> {
+        if (!document.requirementsSpec) {
+            throw new ValidationError('Requirements specification is required for error taxonomy generation', {
+                documentId: document.id
+            });
+        }
+
+        if (!document.analysis || !document.analysis.useCases) {
+            throw new ValidationError('Use cases are required for error taxonomy generation', {
+                documentId: document.id
+            });
+        }
+
+        const prompt = PromptFactory.createErrorTaxonomyPrompt(
+            document.requirementsSpec,
+            document.analysis.useCases,
+            document.apiDesign?.openApiSpec
+        );
+
+        const result = await this.vertexRepo.generateText(prompt);
+
+        try {
+            // Parse JSON response
+            const cleanJson = result.replace(/```json/g, '').replace(/```/g, '').trim();
+            const taxonomy = JSON.parse(cleanJson);
+
+            // Generate exception hierarchy diagram
+            let exceptionHierarchy = taxonomy.exceptionHierarchy;
+            if (!exceptionHierarchy && taxonomy.categories) {
+                exceptionHierarchy = this.generateExceptionHierarchyDiagram(taxonomy);
+            }
+
+            // Generate error flow diagram (optional)
+            let errorFlowDiagram = taxonomy.errorFlowDiagram;
+            if (!errorFlowDiagram) {
+                errorFlowDiagram = this.generateErrorFlowDiagram(taxonomy);
+            }
+
+            document.errorHandling = {
+                taxonomy,
+                exceptionHierarchy,
+                errorFlowDiagram,
+                completed: true
+            };
+
+            document.updatedAt = new Date();
+
+            return document;
+        } catch (error) {
+            console.error('Failed to generate error taxonomy:', error);
+            throw new ValidationError('Failed to generate valid error taxonomy', {
+                documentId: document.id,
+                error: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
+    }
+
+    // Helper: Generate exception hierarchy class diagram
+    private generateExceptionHierarchyDiagram(taxonomy: any): string {
+        let mermaid = 'classDiagram\n';
+        mermaid += `  class ${taxonomy.baseExceptionClass} {\n`;
+        mermaid += `    +message: string\n`;
+        mermaid += `    +stack: string\n`;
+        mermaid += `  }\n\n`;
+
+        // Generate categories as classes
+        taxonomy.categories?.forEach((cat: any) => {
+            mermaid += `  class ${cat.exceptionClass} {\n`;
+            mermaid += `    +httpStatus: ${cat.httpStatus}\n`;
+            mermaid += `    +errorCode: string\n`;
+            mermaid += `    +recoverable: boolean\n`;
+            mermaid += `  }\n`;
+
+            // Inheritance relationship
+            const parent = cat.parentCategory ?
+                taxonomy.categories.find((c: any) => c.name === cat.parentCategory)?.exceptionClass :
+                taxonomy.baseExceptionClass;
+            mermaid += `  ${parent} <|-- ${cat.exceptionClass}\n\n`;
+        });
+
+        return mermaid;
+    }
+
+    // Helper: Generate error handling flow diagram
+    private generateErrorFlowDiagram(taxonomy: any): string {
+        let mermaid = 'flowchart TD\n';
+        mermaid += '  Start([Error Occurs]) --> Catch{Catch Exception}\n';
+
+        taxonomy.categories?.forEach((cat: any, idx: number) => {
+            const nodeId = `Cat${idx}`;
+            mermaid += `  Catch -->|${cat.exceptionClass}| ${nodeId}[Handle ${cat.name}]\n`;
+
+            if (cat.handlingStrategy === 'Retry') {
+                mermaid += `  ${nodeId} --> Retry${idx}{Retry?}\n`;
+                mermaid += `  Retry${idx} -->|Yes| Start\n`;
+                mermaid += `  Retry${idx} -->|Max Attempts| Log${idx}[Log Error]\n`;
+            } else if (cat.handlingStrategy === 'Fallback') {
+                mermaid += `  ${nodeId} --> Fallback${idx}[Execute Fallback]\n`;
+                mermaid += `  Fallback${idx} --> Log${idx}[Log Warning]\n`;
+            } else if (cat.handlingStrategy === 'FailFast') {
+                mermaid += `  ${nodeId} --> Log${idx}[Log Error]\n`;
+                mermaid += `  Log${idx} --> Return${idx}[Return Error Response]\n`;
+            }
+        });
+
+        mermaid += '  Catch -->|Unknown| Unknown[Log Unknown Error]\n';
+        mermaid += '  Unknown --> Return500[Return 500]\n';
+
+        return mermaid;
     }
 }
