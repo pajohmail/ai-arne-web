@@ -1,14 +1,15 @@
 'use client';
 
 
-import { DesignDocument, ProjectPhase } from '@/core/models/DesignDocument';
+import { DesignDocument, ProjectPhase, TargetTier } from '@/core/models/DesignDocument';
 import { RequirementsSpecPhase } from '../phases/RequirementsSpecPhase';
 import { TechStackPhase } from '../phases/TechStackPhase';
 import { AnalysisPhase } from '../phases/AnalysisPhase';
 import { CompletedPhase } from '../phases/CompletedPhase';
 import { ModelTierBadge } from '../shared/ModelTierBadge';
+import { TierSelector } from '../shared/TierSelector';
 import { usePhaseAutomation } from '@/presentation/hooks/usePhaseAutomation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 interface ProjectWizardProps {
     document: DesignDocument;
@@ -25,6 +26,7 @@ const steps: { id: ProjectPhase; label: string }[] = [
 export const ProjectWizard = ({ document, onUpdate }: ProjectWizardProps) => {
     const currentStepIndex = steps.findIndex((s) => s.id === document.currentPhase);
     const { automationState } = usePhaseAutomation();
+    const [showTierSelector, setShowTierSelector] = useState(false);
 
     // Migration: Auto-migrate old phases to 'completed'
     useEffect(() => {
@@ -39,12 +41,73 @@ export const ProjectWizard = ({ document, onUpdate }: ProjectWizardProps) => {
         onUpdate({ ...document, currentPhase: phase });
     };
 
+    const handleTierChange = (tier: TargetTier) => {
+        onUpdate({ ...document, targetTier: tier });
+        setShowTierSelector(false);
+    };
+
+    const getTierInfo = (tier: TargetTier) => {
+        const tiers = {
+            1: { name: 'TIER 1', color: 'from-blue-500 to-cyan-500', icon: '🚀', percent: '70-80%' },
+            2: { name: 'TIER 2', color: 'from-purple-500 to-pink-500', icon: '💼', percent: '85-90%' },
+            3: { name: 'TIER 3', color: 'from-amber-500 to-orange-500', icon: '🏢', percent: '90-95%' },
+            4: { name: 'TIER 4', color: 'from-red-500 to-rose-500', icon: '🔒', percent: '95-100%' }
+        };
+        return tiers[tier];
+    };
+
+    const tierInfo = getTierInfo(document.targetTier);
+
     return (
         <div className="w-full max-w-6xl mx-auto p-6">
-            {/* Model Tier Badge */}
-            <div className="mb-4 flex justify-end">
+            {/* Header with Badges */}
+            <div className="mb-4 flex justify-between items-center">
+                {/* Specification TIER Badge (clickable) */}
+                <button
+                    onClick={() => setShowTierSelector(true)}
+                    className={`
+                        inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium
+                        bg-gradient-to-r ${tierInfo.color} text-white shadow-lg
+                        hover:shadow-xl transition-all duration-200 transform hover:scale-105
+                    `}
+                >
+                    <span className="text-lg">{tierInfo.icon}</span>
+                    <span className="font-bold">{tierInfo.name}</span>
+                    <span className="text-xs opacity-90">({tierInfo.percent} AI)</span>
+                    <svg className="w-4 h-4 opacity-75" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                </button>
+
+                {/* AI Model Tier Badge */}
                 <ModelTierBadge />
             </div>
+
+            {/* TIER Selector Modal */}
+            {showTierSelector && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
+                        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+                            <h2 className="text-2xl font-bold text-gray-900">Choose Specification Tier</h2>
+                            <button
+                                onClick={() => setShowTierSelector(false)}
+                                className="text-gray-400 hover:text-gray-600 transition-colors"
+                            >
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div className="p-6">
+                            <TierSelector
+                                selectedTier={document.targetTier}
+                                onTierChange={handleTierChange}
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Stepper */}
             <div className="mb-8">
