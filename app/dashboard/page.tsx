@@ -285,42 +285,67 @@ const ProjectDemoWrapper = ({ userId }: { userId: string }) => {
 
     return (
         <div>
-            <div className="mb-4 flex justify-between items-center bg-white p-4 rounded-lg shadow-sm border">
-                <div className="flex items-center gap-4 flex-1">
-                    <button
-                        onClick={() => setSelectedProject(null)}
-                        className="text-blue-600 hover:text-blue-800 flex items-center gap-2"
-                    >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                        </svg>
-                        Alla projekt
-                    </button>
-                    <span className="text-gray-300">|</span>
-                    <div className="flex items-center gap-2 flex-1">
-                        <span className="text-gray-500 font-medium">Project:</span>
-                        <input
-                            type="text"
-                            value={selectedProject.projectName}
-                            onChange={(e) => {
-                                const updated = { ...selectedProject, projectName: e.target.value };
-                                setSelectedProject(updated);
-                                handleUpdate(updated);
-                            }}
-                            className="font-semibold text-lg text-gray-800 border-none hover:bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 rounded px-2 py-1 flex-1 transition-colors"
-                            placeholder="Name your project..."
-                        />
+            <div className="mb-4 bg-white p-4 rounded-lg shadow-sm border">
+                <div className="flex justify-between items-center mb-3">
+                    <div className="flex items-center gap-4 flex-1">
+                        <button
+                            onClick={() => setSelectedProject(null)}
+                            className="text-blue-600 hover:text-blue-800 flex items-center gap-2"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                            </svg>
+                            Alla projekt
+                        </button>
+                        <span className="text-gray-300">|</span>
+                        <button
+                            onClick={createNewProject}
+                            className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 flex items-center gap-2 transition-colors"
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            </svg>
+                            Nytt projekt
+                        </button>
                     </div>
+                    <button
+                        onClick={() => setShowDeleteConfirm(selectedProject.id)}
+                        className="px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-2"
+                    >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        Radera projekt
+                    </button>
                 </div>
-                <button
-                    onClick={() => setShowDeleteConfirm(selectedProject.id)}
-                    className="px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-2"
-                >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                    Radera projekt
-                </button>
+                <div className="flex items-center gap-3">
+                    <label className="text-gray-500 font-medium text-sm">Aktuellt projekt:</label>
+                    <select
+                        value={selectedProject.id}
+                        onChange={(e) => {
+                            const project = projects.find(p => p.id === e.target.value);
+                            if (project) setSelectedProject(project);
+                        }}
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold text-gray-800 transition-colors"
+                    >
+                        {projects.map(project => (
+                            <option key={project.id} value={project.id}>
+                                {project.projectName}
+                            </option>
+                        ))}
+                    </select>
+                    <input
+                        type="text"
+                        value={selectedProject.projectName}
+                        onChange={(e) => {
+                            const updated = { ...selectedProject, projectName: e.target.value };
+                            setSelectedProject(updated);
+                            handleUpdate(updated);
+                        }}
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 font-semibold text-gray-800 transition-colors"
+                        placeholder="Projektnamn..."
+                    />
+                </div>
             </div>
 
             <ProjectWizard document={selectedProject} onUpdate={handleUpdate} />
