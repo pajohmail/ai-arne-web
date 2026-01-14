@@ -61,18 +61,6 @@ export const ProjectWizard = ({ document, onUpdate }: ProjectWizardProps) => {
         setShowTierSelector(false);
     };
 
-    const getTierInfo = (tier: TargetTier) => {
-        const tiers = {
-            1: { name: 'TIER 1', color: 'from-blue-500 to-cyan-500', icon: '🚀', percent: '70-80%' },
-            2: { name: 'TIER 2', color: 'from-purple-500 to-pink-500', icon: '💼', percent: '85-90%' },
-            3: { name: 'TIER 3', color: 'from-amber-500 to-orange-500', icon: '🏢', percent: '90-95%' },
-            4: { name: 'TIER 4', color: 'from-red-500 to-rose-500', icon: '🔒', percent: '95-100%' }
-        };
-        return tiers[tier];
-    };
-
-    const tierInfo = getTierInfo(document.targetTier);
-
     return (
         <div className="w-full max-w-6xl mx-auto p-6">
             {/* Header with Badges */}

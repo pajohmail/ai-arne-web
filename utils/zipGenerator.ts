@@ -106,69 +106,66 @@ export async function generateSingleProjectZip(
     // Create specs folder
     const specsFolder = zip.folder('specs');
     if (specsFolder) {
-        // TIER 1: Gherkin scenarios
-        if (document.tier1?.gherkinScenarios) {
-            specsFolder.file('scenarios.feature', document.tier1.gherkinScenarios);
+        // TIER 1: Gherkin scenarios (extracted from Use Cases)
+        const allScenarios = document.analysis?.useCases
+            .filter(uc => uc.gherkinScenarios && uc.gherkinScenarios.length > 0)
+            .flatMap(uc => uc.gherkinScenarios!) || [];
+        
+        if (allScenarios.length > 0) {
+            const featureContent = allScenarios.map(s => 
+                `Feature: ${s.feature}\n  Scenario: ${s.scenario}\n${s.steps}`
+            ).join('\n\n');
+            specsFolder.file('scenarios.feature', featureContent);
         }
 
         // TIER 1: API specifications
-        if (document.tier1?.apiSpecification) {
-            specsFolder.file('api-spec.yaml', document.tier1.apiSpecification);
+        if (document.apiDesign?.openApiSpec) {
+            specsFolder.file('api-spec.yaml', document.apiDesign.openApiSpec);
         }
 
         // TIER 1: Traceability matrix
-        if (document.tier1?.traceabilityMatrix) {
-            specsFolder.file('traceability-matrix.md', document.tier1.traceabilityMatrix);
+        if (document.validation?.traceabilityMatrix) {
+            specsFolder.file('traceability-matrix.json', JSON.stringify(document.validation.traceabilityMatrix, null, 2));
         }
 
-        // TIER 2: Algorithm specifications
-        if (document.tier2?.algorithmSpecifications) {
-            const algos = Object.entries(document.tier2.algorithmSpecifications)
-                .map(([name, spec]) => `## ${name}\n\n${JSON.stringify(spec, null, 2)}`)
-                .join('\n\n---\n\n');
+        // TIER 2: Algorithm specifications (from Operation Contracts)
+        const algos = document.objectDesign?.contracts
+            .filter(c => c.algorithmSpec)
+            .map(c => `## Operation: ${c.operation}\n\n${JSON.stringify(c.algorithmSpec, null, 2)}`)
+            .join('\n\n---\n\n');
+        
+        if (algos) {
             specsFolder.file('algorithms.md', algos);
         }
 
         // TIER 2: Business rules
-        if (document.tier2?.businessRules) {
-            specsFolder.file('business-rules.dmn',
-                typeof document.tier2.businessRules === 'string'
-                    ? document.tier2.businessRules
-                    : JSON.stringify(document.tier2.businessRules, null, 2)
-            );
+        if (document.businessRules) {
+            specsFolder.file('business-rules.md', JSON.stringify(document.businessRules, null, 2));
         }
 
-        // TIER 2: Database schema
-        if (document.tier2?.databaseSchema) {
-            specsFolder.file('database-schema.sql', document.tier2.databaseSchema);
+        // TIER 2: Data model
+        if (document.dataModel) {
+            specsFolder.file('data-model.md', JSON.stringify(document.dataModel, null, 2));
         }
 
         // TIER 3: Security specification
-        if (document.tier3?.security) {
-            specsFolder.file('security-spec.md', JSON.stringify(document.tier3.security, null, 2));
+        if (document.security) {
+            specsFolder.file('security-spec.md', JSON.stringify(document.security, null, 2));
         }
 
         // TIER 3: Deployment specification
-        if (document.tier3?.deployment) {
-            specsFolder.file('deployment-spec.yaml',
-                typeof document.tier3.deployment === 'string'
-                    ? document.tier3.deployment
-                    : JSON.stringify(document.tier3.deployment, null, 2)
-            );
+        if (document.deployment) {
+            specsFolder.file('deployment-spec.md', JSON.stringify(document.deployment, null, 2));
         }
 
         // TIER 4: Formal methods
-        if (document.tier4?.formalMethods) {
-            specsFolder.file('formal-methods.tla',
-                typeof document.tier4.formalMethods === 'string'
-                    ? document.tier4.formalMethods
-                    : JSON.stringify(document.tier4.formalMethods, null, 2)
-            );
+        if (document.formalMethods) {
+            specsFolder.file('formal-methods.md', JSON.stringify(document.formalMethods, null, 2));
         }
 
         // TIER 4: State machines
-        if (document.tier4?.stateMachines) {
-            specsFolder.file('state-machines.md', JSON.stringify(document.tier4.stateMachines, null, 2));
+        if (document.stateMachines) {
+            specsFolder.file('state-machines.md', JSON.stringify(document.stateMachines, null, 2));
         }
     }
 
@@ -208,7 +205,7 @@ ${document.description}
 ${document.analysis?.domainModelMermaid ? '- `diagrams/domain-model.mmd` - Domain model (Mermaid format)\n' : ''}${document.systemDesign?.architectureDiagramMermaid ? '- `diagrams/architecture.mmd` - System architecture diagram\n' : ''}${document.objectDesign?.classDiagramMermaid ? '- `diagrams/class-diagram.mmd` - Class diagram\n' : ''}${document.objectDesign?.sequenceDiagramsMermaid?.length ? `- \`diagrams/sequence-diagram-*.mmd\` - ${document.objectDesign.sequenceDiagramsMermaid.length} sequence diagram(s)\n` : ''}${document.systemDesign?.deploymentDiagramMermaid ? '- `diagrams/deployment.mmd` - Deployment diagram\n' : ''}
 
 ### Specifications
-${document.tier1?.gherkinScenarios ? '- `specs/scenarios.feature` - Gherkin test scenarios\n' : ''}${document.tier1?.apiSpecification ? '- `specs/api-spec.yaml` - API specifications (OpenAPI format)\n' : ''}${document.tier1?.traceabilityMatrix ? '- `specs/traceability-matrix.md` - Requirements traceability\n' : ''}${document.tier2?.algorithmSpecifications ? '- `specs/algorithms.md` - Algorithm specifications\n' : ''}${document.tier2?.businessRules ? '- `specs/business-rules.dmn` - Business rules (DMN format)\n' : ''}${document.tier2?.databaseSchema ? '- `specs/database-schema.sql` - Database schema\n' : ''}${document.tier3?.security ? '- `specs/security-spec.md` - Security specifications\n' : ''}${document.tier3?.deployment ? '- `specs/deployment-spec.yaml` - Deployment configuration\n' : ''}${document.tier4?.formalMethods ? '- `specs/formal-methods.tla` - Formal methods (TLA+ format)\n' : ''}${document.tier4?.stateMachines ? '- `specs/state-machines.md` - State machine specifications\n' : ''}
+${document.analysis?.useCases.some(u => u.gherkinScenarios?.length) ? '- `specs/scenarios.feature` - Gherkin test scenarios\n' : ''}${document.apiDesign?.openApiSpec ? '- `specs/api-spec.yaml` - API specifications (OpenAPI format)\n' : ''}${document.validation?.traceabilityMatrix ? '- `specs/traceability-matrix.json` - Requirements traceability\n' : ''}${document.objectDesign?.contracts.some(c => c.algorithmSpec) ? '- `specs/algorithms.md` - Algorithm specifications\n' : ''}${document.businessRules ? '- `specs/business-rules.md` - Business rules\n' : ''}${document.dataModel ? '- `specs/data-model.md` - Data model\n' : ''}${document.security ? '- `specs/security-spec.md` - Security specifications\n' : ''}${document.deployment ? '- `specs/deployment-spec.md` - Deployment configuration\n' : ''}${document.formalMethods ? '- `specs/formal-methods.md` - Formal methods\n' : ''}${document.stateMachines ? '- `specs/state-machines.md` - State machine specifications\n' : ''}
 
 ## How to Use
 

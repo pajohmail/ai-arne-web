@@ -3,7 +3,6 @@
 import { DesignDocument } from '@/core/models/DesignDocument';
 import { useState, useEffect } from 'react';
 import { useDesignArchitect } from '@/presentation/hooks/useDesignArchitect';
-import { useAuth } from '@/presentation/hooks/useAuth';
 import { generateSingleProjectZip, downloadBlob } from '@/utils/zipGenerator';
 
 interface PhaseProps {
@@ -16,7 +15,6 @@ export const CompletedPhase = ({ document: designDoc, onUpdate }: PhaseProps) =>
     const [isGeneratingReport, setIsGeneratingReport] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const { generateReport } = useDesignArchitect();
-    const { user } = useAuth();
 
     const report = designDoc.validation?.generatedReport;
 
