@@ -27,6 +27,21 @@ export const ProjectWizard = ({ document, onUpdate }: ProjectWizardProps) => {
     const currentStepIndex = steps.findIndex((s) => s.id === document.currentPhase);
     const { automationState } = usePhaseAutomation();
     const [showTierSelector, setShowTierSelector] = useState(false);
+    const [tierSelectorShownForProject, setTierSelectorShownForProject] = useState<string | null>(null);
+
+    // Show TIER selector automatically for new projects
+    useEffect(() => {
+        // Check if this is a new project that hasn't been worked on yet
+        const isNewProject = document.currentPhase === 'requirementsSpec' &&
+                           (!document.requirementsSpec?.projectPurpose || document.requirementsSpec.projectPurpose === '') &&
+                           document.requirementsSpec?.functionalRequirements?.length === 0;
+
+        // Only show once per project (not on every re-render)
+        if (isNewProject && tierSelectorShownForProject !== document.id) {
+            setShowTierSelector(true);
+            setTierSelectorShownForProject(document.id);
+        }
+    }, [document.id, document.currentPhase]);
 
     // Migration: Auto-migrate old phases to 'completed'
     useEffect(() => {
@@ -61,25 +76,7 @@ export const ProjectWizard = ({ document, onUpdate }: ProjectWizardProps) => {
     return (
         <div className="w-full max-w-6xl mx-auto p-6">
             {/* Header with Badges */}
-            <div className="mb-4 flex justify-between items-center">
-                {/* Specification TIER Badge (clickable) */}
-                <button
-                    onClick={() => setShowTierSelector(true)}
-                    className={`
-                        inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium
-                        bg-gradient-to-r ${tierInfo.color} text-white shadow-lg
-                        hover:shadow-xl transition-all duration-200 transform hover:scale-105
-                    `}
-                >
-                    <span className="text-lg">{tierInfo.icon}</span>
-                    <span className="font-bold">{tierInfo.name}</span>
-                    <span className="text-xs opacity-90">({tierInfo.percent} AI)</span>
-                    <svg className="w-4 h-4 opacity-75" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                </button>
-
+            <div className="mb-4 flex justify-end items-center">
                 {/* AI Model Tier Badge */}
                 <ModelTierBadge />
             </div>

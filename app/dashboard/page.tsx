@@ -107,7 +107,7 @@ const ProjectDemoWrapper = ({ userId }: { userId: string }) => {
                     new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
                 );
                 setProjects(sortedDocs);
-                setSelectedProject(sortedDocs[0] as DesignDocument);
+                // Removed auto-select - user should see project list and choose
                 console.log(`Loaded ${docs.length} projects`);
             }
         } catch (error) {

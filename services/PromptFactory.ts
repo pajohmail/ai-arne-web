@@ -45,7 +45,28 @@ export class PromptFactory {
     // Phase 1: Technology Stack
     static createTechStackPrompt(chatLog: string, requirements?: string): string {
         const requirementsContext = requirements
-            ? `\n\nREQUIREMENTS CONTEXT:\nThe following requirements were identified:\n${requirements}\n\nUse these to recommend appropriate technologies.\n`
+            ? `
+═══════════════════════════════════════════════════════════════
+⚠️  ALREADY DEFINED IN REQUIREMENTS PHASE - DO NOT RE-ASK! ⚠️
+═══════════════════════════════════════════════════════════════
+
+The following was ALREADY discussed and defined in the Requirements phase:
+${requirements}
+
+❌ DO NOT ask about:
+   - Project purpose or goals (already defined)
+   - Who will use the system (stakeholders already identified)
+   - What features are needed (requirements already captured)
+   - Business constraints (already documented)
+
+✅ FOCUS ONLY ON:
+   - Technology selection
+   - Technical architecture decisions
+   - Platform and framework choices
+   - Infrastructure and deployment preferences
+
+═══════════════════════════════════════════════════════════════
+`
             : '';
 
         return `
@@ -56,7 +77,8 @@ export class PromptFactory {
         INSTRUCTIONS:
         1. Act professionally and ask LEADING questions to determine the best tech stack.
         2. IMPORTANT: ADAPT TO THE USER'S LANGUAGE (Swedish/English).
-        3. Ask about:
+        3. CRITICAL: If requirements context is provided above, DO NOT re-ask about project purpose, features, or stakeholders. Focus ONLY on technology choices.
+        4. Ask about:
            - Expected user load and scalability needs
            - Application type (web, mobile, desktop, hybrid)
            - Team skills and experience level
@@ -96,20 +118,41 @@ export class PromptFactory {
     }
 
     // Phase 2: Analysis
-    static createUseCaseExtractionPrompt(chatLog: string, requirements?: string): string {
-        const requirementsContext = requirements
-            ? `\n\nREQUIREMENTS CONTEXT:\nThe following requirements were defined in the Requirements Specification phase:\n${requirements}\n\nUse these requirements to guide your use case identification.\n`
+    static createUseCaseExtractionPrompt(chatLog: string, requirements?: string, techStack?: string): string {
+        const alreadyDefinedContext = (requirements || techStack)
+            ? `
+═══════════════════════════════════════════════════════════════
+⚠️  ALREADY DEFINED IN PREVIOUS PHASES - DO NOT RE-ASK! ⚠️
+═══════════════════════════════════════════════════════════════
+
+${requirements ? `📋 REQUIREMENTS (Phase 0):\n${requirements}\n` : ''}
+${techStack ? `🛠️  TECHNOLOGY STACK (Phase 1):\n${techStack}\n` : ''}
+
+❌ DO NOT ask about:
+   - Project purpose or business goals (already defined)
+   - Functional or quality requirements (already captured)
+   - Technology choices or platforms (already selected)
+   - Who will use the system (stakeholders already identified)
+
+✅ FOCUS ONLY ON:
+   - USE CASES that implement the requirements
+   - Actor interactions and scenarios
+   - System behavior and workflows
+   - Edge cases and alternative paths
+
+═══════════════════════════════════════════════════════════════
+`
             : '';
 
         return `
         Analyze the following conversation about a software system.
-        ${requirementsContext}
+        ${alreadyDefinedContext}
         Focus on identifying USE CASES that fulfill the requirements.
 
         1. Act as an expert software architect. Provide a helpful, concise response.
         2. IMPORTANTE: ADAPT TO THE USER'S LANGUAGE.
-        3. CRITICAL: Be PROACTIVE and DRIVE the conversation forward. Instead of open-ended questions, ask LEADING questions (e.g., "Shall we include a dashboard for admins?", "I assume users need a login, correct?").
-        4. When you have a solid baseline, explicitly PROPOSE moving to the 'System Design' phase.
+        3. CRITICAL: If context is provided above, DO NOT re-ask about requirements, tech stack, or project purpose. Be PROACTIVE and DRIVE the conversation forward with LEADING questions about use cases and interactions (e.g., "Shall we include a dashboard for admins?", "I assume users need a login, correct?").
+        4. When you have a solid baseline of use cases, explicitly PROPOSE moving to the 'System Design' phase.
         5. Extract any new Use Cases or update existing ones based on the conversation.
 
         Return the result as a JSON object with the following structure:

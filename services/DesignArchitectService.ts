@@ -181,7 +181,19 @@ ${req.qualityRequirements?.map(qr => `- ${qr.category}: ${qr.description}`).join
             `.trim();
         }
 
-        const prompt = PromptFactory.createUseCaseExtractionPrompt(chatLog, requirementsContext);
+        let techStackContext = '';
+        if (document.techStack) {
+            const ts = document.techStack;
+            techStackContext = `
+Frontend: ${ts.frontend?.name || 'Not specified'}
+Backend: ${ts.backend?.name || 'Not specified'}
+Database: ${ts.database?.name || 'Not specified'}
+Hosting: ${ts.hosting?.name || 'Not specified'}
+Additional Tools: ${ts.additionalTools?.map(t => t.name).join(', ') || 'None'}
+            `.trim();
+        }
+
+        const prompt = PromptFactory.createUseCaseExtractionPrompt(chatLog, requirementsContext, techStackContext);
         const result = await this.vertexRepo.generateText(prompt);
 
         let reply = "I've updated the analysis.";
