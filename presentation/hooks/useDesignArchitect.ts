@@ -28,10 +28,10 @@ export function useDesignArchitect() {
 
             if (data?.geminiApiKey) {
                 setUserApiKey(data.geminiApiKey);
-                setCurrentModel('gemini-3-flash-preview'); // Pro tier uses Gemini 3 Flash
+                setCurrentModel('gemini-2.0-flash'); // Pro tier uses user's key
             } else {
                 setUserApiKey(null);
-                setCurrentModel('gemini-1.5-flash'); // Free tier uses Gemini 1.5 Flash
+                setCurrentModel('gemini-2.0-flash'); // Free tier uses Gemini 2.0 Flash
             }
         } catch (error) {
             console.error('Failed to load user API key:', error);
@@ -41,7 +41,7 @@ export function useDesignArchitect() {
     const getService = () => {
         // Use user's key if available (Pro tier), otherwise use default key (Free tier)
         const apiKey = userApiKey || config.gemini.apiKey;
-        const model = userApiKey ? 'gemini-3-flash-preview' : 'gemini-1.5-flash';
+        const model = config.gemini.model; // Use model from config (gemini-2.0-flash)
 
         const geminiRepo = new GeminiRepository(apiKey, model);
         return new DesignArchitectService(geminiRepo);

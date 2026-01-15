@@ -98,7 +98,7 @@ export const ApiKeySettings = () => {
         <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-2">AI Model Settings</h2>
             <p className="text-sm text-gray-600 mb-6">
-                Upgrade to Gemini 3.0 Flash by providing your own API key
+                Use your own Gemini API key for unlimited quota
             </p>
 
             {/* Current Tier */}
@@ -110,7 +110,7 @@ export const ApiKeySettings = () => {
                         </h3>
                         <p className="text-sm text-gray-600">
                             Model: <span className="font-mono font-semibold">
-                                {savedKey ? 'gemini-3-flash-preview' : 'gemini-1.5-flash'}
+                                gemini-2.0-flash
                             </span>
                         </p>
                         <p className="text-xs text-gray-500 mt-1">
