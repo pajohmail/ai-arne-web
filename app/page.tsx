@@ -3,6 +3,7 @@
 import { useAuth } from '@/presentation/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import Link from 'next/link';
 
 export default function Home() {
   const { user, signInWithGoogle, loading } = useAuth();
@@ -32,7 +33,7 @@ export default function Home() {
           AI-Driven Design Documentation & Architecture Tool
         </p>
 
-        <div className="pt-8">
+        <div className="pt-8 flex flex-col items-center gap-4">
           <button
             onClick={signInWithGoogle}
             className="px-8 py-4 bg-white text-gray-900 rounded-lg font-semibold hover:bg-gray-100 transition-all flex items-center gap-3 mx-auto shadow-lg hover:shadow-xl transform hover:-translate-y-1"
@@ -44,6 +45,20 @@ export default function Home() {
             />
             Sign in with Google
           </button>
+          <div className="flex gap-4 mt-4">
+            <Link
+              href="/projects"
+              className="px-6 py-2 text-gray-300 hover:text-white border border-gray-600 hover:border-gray-400 rounded-lg transition-colors"
+            >
+              Projekt
+            </Link>
+            <Link
+              href="/about"
+              className="px-6 py-2 text-gray-300 hover:text-white border border-gray-600 hover:border-gray-400 rounded-lg transition-colors"
+            >
+              Om mig
+            </Link>
+          </div>
         </div>
       </div>
     </main>
