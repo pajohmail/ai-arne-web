@@ -29,7 +29,7 @@ export default function Home() {
           SirenOOP
         </h1>
         <p className="text-xl text-gray-300">
-          AI-Driven Design Documentation & Architecture Tool
+          Ett verktyg för objektorienterad design
         </p>
 
         <div className="pt-8">
