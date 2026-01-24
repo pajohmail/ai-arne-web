@@ -1,28 +1,6 @@
-'use client';
-
-import { useAuth } from '@/presentation/hooks/useAuth';
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
 import Link from 'next/link';
 
 export default function Home() {
-  const { user, signInWithGoogle, loading } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (user) {
-      router.push('/dashboard');
-    }
-  }, [user, router]);
-
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-24 bg-gradient-to-br from-gray-900 to-gray-800 text-white">
       <div className="text-center space-y-6 max-w-4xl mx-auto">
@@ -35,7 +13,7 @@ export default function Home() {
 
         <div className="text-left text-gray-400 leading-relaxed space-y-4 px-4">
             <p>
-                Låt oss vara ärliga: Utvecklingen av AI och digitala verktyg går just nu rasande fort. Det som var "cutting edge" i morse är antagligen obsolet lagom till eftermiddagsfikat. Att försöka lära sig detta via traditionella kurser är lite som att läsa en bok om simning utan att någonsin hoppa i vattnet.
+                Låt oss vara ärliga: Utvecklingen av AI och digitala verktyg går just nu rasande fort. Det som var &quot;cutting edge&quot; i morse är antagligen obsolet lagom till eftermiddagsfikat. Att försöka lära sig detta via traditionella kurser är lite som att läsa en bok om simning utan att någonsin hoppa i vattnet.
             </p>
             <p>
                 Här på sidan tror vi på att göra. Vi provar, vi testar, vi kraschar lite kod, och vi hittar nya, smartare sätt att jobba. Det handlar inte om att veta allt, utan om att våga ta reda på det.
@@ -48,7 +26,7 @@ export default function Home() {
             </p>
         </div>
 
-        {/* Placeholder for an image, as described in the issue */}
+        {/* Placeholder for an image */}
         <div className="w-full h-64 bg-gray-700 rounded-lg my-6 flex items-center justify-center">
             <span className="text-gray-500">Bild kommer här</span>
         </div>
@@ -70,17 +48,6 @@ export default function Home() {
         </div>
 
         <div className="pt-8 flex flex-col items-center gap-4">
-          <button
-            onClick={signInWithGoogle}
-            className="px-8 py-4 bg-white text-gray-900 rounded-lg font-semibold hover:bg-gray-100 transition-all flex items-center gap-3 mx-auto shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-          >
-            <img
-              src="https://www.google.com/favicon.ico"
-              alt="Google"
-              className="w-6 h-6"
-            />
-            Sign in with Google
-          </button>
           <div className="flex gap-4 mt-4">
             <Link
               href="/projects"
