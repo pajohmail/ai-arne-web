@@ -33,18 +33,11 @@ expect {
 send "lcd $local_dir\r"
 expect "sftp>"
 
-# Navigate to remote root (where sirenOOP should live)
+# Navigate to remote directory (root of website)
 send "cd $remote_dir\r"
 expect "sftp>"
 
-# Create sirenOOP directory (will display error but continue if exists)
-send "mkdir sirenOOP\r"
-expect "sftp>"
-
-# Enter sirenOOP directory
-send "cd sirenOOP\r"
-expect "sftp>"
-
+# Upload all files directly to root
 send "mput -r *\r"
 expect "sftp>"
 
