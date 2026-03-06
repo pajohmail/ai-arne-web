@@ -1,69 +1,152 @@
 import Link from 'next/link';
 
+const skills = [
+  'Python', 'TypeScript', 'LLM Orchestration', 'RAG',
+  'OpenClaw', 'Firebase', 'Intune & Microsoft 365', 'Next.js',
+  'Google Cloud', 'Automation',
+];
+
+const featuredProjects = [
+  {
+    id: 'ai-arne-portal',
+    title: 'AI-Arne Portal',
+    stack: ['Next.js', 'TypeScript', 'Firebase', 'Google Cloud'],
+    summary: 'Fullständig AI-driven portalplattform med agenter som automatiskt genererar och publicerar nyheter och tutorials om AI-API:er.',
+    href: '/projects',
+  },
+  {
+    id: 'openclaw-agents',
+    title: 'OpenClaw Sub-agents',
+    stack: ['Python', 'LLM Orchestration', 'OpenAI', 'Anthropic'],
+    summary: 'Hierarkiskt multi-agent-system där en manager-agent delegerar specialiserade deluppgifter till underagenter i parallell exekvering.',
+    href: '/projects',
+  },
+  {
+    id: 'lokal-rag',
+    title: 'Lokal RAG',
+    stack: ['Python', 'RAG', 'Vector DB', 'Embeddings'],
+    summary: 'Retrieval-Augmented Generation-pipeline som kör helt lokalt för att söka och svara på frågor mot interna dokument utan att data lämnar miljön.',
+    href: '/projects',
+  },
+];
+
 export default function Home() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-24 bg-gradient-to-br from-gray-900 to-gray-800 text-white">
-      <div className="text-center space-y-6 max-w-4xl mx-auto">
-        <h1 className="text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-emerald-400">
-          Välkommen till AI-Arne
-        </h1>
-        <p className="text-lg text-gray-300 px-4">
-          Här lär vi oss springa innan vi kan gå, för utvecklingen väntar inte.
-        </p>
-
-        <div className="text-left text-gray-400 leading-relaxed space-y-4 px-4">
-            <p>
-                Låt oss vara ärliga: Utvecklingen av AI och digitala verktyg går just nu rasande fort. Det som var &quot;cutting edge&quot; i morse är antagligen obsolet lagom till eftermiddagsfikat. Att försöka lära sig detta via traditionella kurser är lite som att läsa en bok om simning utan att någonsin hoppa i vattnet.
-            </p>
-            <p>
-                Här på sidan tror vi på att göra. Vi provar, vi testar, vi kraschar lite kod, och vi hittar nya, smartare sätt att jobba. Det handlar inte om att veta allt, utan om att våga ta reda på det.
-            </p>
-            <p>
-                Så känn dig som hemma och kika runt! Utforska mina Projekt för att se vad som är möjligt, dyk ner i en Tutorial om du vill testa själv, eller läs de senaste spaningarna under Nyheter.
-            </p>
-            <p className="text-center text-lg text-gray-300 pt-4">
-                Välkommen till AI-Arne.se.
-            </p>
-        </div>
-
-        {/* Placeholder for an image */}
-        <div className="w-full h-64 bg-gray-700 rounded-lg my-6 flex items-center justify-center">
-            <span className="text-gray-500">Bild kommer här</span>
-        </div>
-
-        <div className="pt-8 border-t border-gray-700 mt-8 text-left space-y-4 px-4">
-            <h2 className="text-3xl font-bold text-white mb-4 text-center">AI-driven Orchestration Framework for GitHub</h2>
-            <p>
-                Jag utvecklar en lösning för att orkestrera AI-modeller direkt i GitHubs ekosystem. Arbetsflödet automatiserar steget från designdokument till färdig kod genom följande steg:
-            </p>
-            <ul className="list-disc list-inside space-y-2">
-                <li><strong>Planering:</strong> Claude Code analyserar designdokument och bryter ner arkitekturen i specifika delkomponenter.</li>
-                <li><strong>Hantering:</strong> Dessa komponenter omvandlas automatiskt till GitHub Issues för tydlig struktur och spårbarhet.</li>
-                <li><strong>Exekvering:</strong> En dedikerad server pollar repot och triggar Gemini CLI för att iterativt lösa och stänga öppna issues.</li>
-                <li><strong>Transparens:</strong> All aktivitet, loggning och kodutveckling sker versionshanterat direkt i Git och GitHub.</li>
-            </ul>
-            <p className="text-center pt-4">
-                Projektet lanseras inom kort under
-            </p>
-        </div>
-
-        <div className="pt-8 flex flex-col items-center gap-4">
-          <div className="flex gap-4 mt-4">
+    <main className="min-h-screen bg-gray-900 text-white">
+      {/* Hero */}
+      <section className="relative overflow-hidden px-6 py-28 sm:py-36">
+        <div
+          className="absolute inset-0 -z-10 opacity-20"
+          style={{
+            background: 'radial-gradient(ellipse 80% 60% at 50% 0%, #10b981, transparent)',
+          }}
+        />
+        <div className="max-w-3xl mx-auto">
+          <p className="text-emerald-400 text-sm font-mono tracking-widest uppercase mb-4">
+            AI · LLM · Automation
+          </p>
+          <h1 className="text-5xl sm:text-6xl font-bold leading-tight mb-6">
+            Hej, jag är{' '}
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-emerald-400">
+              Per-Arne (Paj).
+            </span>
+          </h1>
+          <p className="text-xl text-gray-300 leading-relaxed mb-10 max-w-2xl">
+            Jag bygger autonoma AI-agenter, RAG-system och automatiserar verksamheter.
+          </p>
+          <div className="flex flex-wrap gap-4">
             <Link
               href="/projects"
-              className="px-6 py-2 text-gray-300 hover:text-white border border-gray-600 hover:border-gray-400 rounded-lg transition-colors"
+              className="px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-gray-900 font-semibold rounded-lg transition-colors"
             >
-              Projekt
+              Se mina projekt
             </Link>
             <Link
-              href="/about"
-              className="px-6 py-2 text-gray-300 hover:text-white border border-gray-600 hover:border-gray-400 rounded-lg transition-colors"
+              href="/contact"
+              className="px-6 py-3 border border-gray-600 hover:border-gray-400 text-gray-300 hover:text-white rounded-lg transition-colors"
             >
-              Om mig
+              Kontakta mig
             </Link>
           </div>
         </div>
-      </div>
+      </section>
+
+      {/* Skills */}
+      <section className="px-6 py-16 border-t border-gray-800">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-sm font-mono text-gray-500 uppercase tracking-widest mb-6">
+            Nyckelkompetenser
+          </h2>
+          <div className="flex flex-wrap gap-3">
+            {skills.map((skill) => (
+              <span
+                key={skill}
+                className="px-4 py-1.5 bg-gray-800 border border-gray-700 text-gray-300 text-sm rounded-full hover:border-emerald-500 hover:text-emerald-400 transition-colors"
+              >
+                {skill}
+              </span>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Featured Projects */}
+      <section className="px-6 py-16 border-t border-gray-800">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-2xl font-bold mb-2">Utvalda projekt</h2>
+          <p className="text-gray-400 mb-10 text-sm">Ett urval av vad jag byggt.</p>
+          <div className="grid gap-6 sm:grid-cols-3">
+            {featuredProjects.map((p) => (
+              <Link
+                key={p.id}
+                href={p.href}
+                className="group flex flex-col bg-gray-800/50 border border-gray-700 hover:border-emerald-500/50 rounded-xl p-5 transition-colors"
+              >
+                <h3 className="font-semibold text-white mb-2 group-hover:text-emerald-400 transition-colors">
+                  {p.title}
+                </h3>
+                <p className="text-gray-400 text-sm leading-relaxed mb-4 flex-1">{p.summary}</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {p.stack.map((t) => (
+                    <span
+                      key={t}
+                      className="px-2 py-0.5 bg-gray-700/60 text-gray-400 text-xs rounded"
+                    >
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              </Link>
+            ))}
+          </div>
+          <div className="mt-8">
+            <Link
+              href="/projects"
+              className="text-emerald-400 hover:text-emerald-300 text-sm font-medium transition-colors"
+            >
+              Alla projekt →
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="px-6 py-20 border-t border-gray-800">
+        <div className="max-w-3xl mx-auto text-center">
+          <h2 className="text-3xl font-bold mb-4">
+            Söker du expertis inom AI &amp; automation?
+          </h2>
+          <p className="text-gray-400 mb-8 max-w-xl mx-auto">
+            Jag är öppen för anställningar och konsultuppdrag inom AI-agenter, LLM-orkestrering och automatisering.
+          </p>
+          <Link
+            href="/contact"
+            className="inline-block px-8 py-3 bg-emerald-500 hover:bg-emerald-400 text-gray-900 font-semibold rounded-lg transition-colors"
+          >
+            Kontakta mig
+          </Link>
+        </div>
+      </section>
     </main>
   );
 }
