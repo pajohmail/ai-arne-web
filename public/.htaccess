@@ -1,0 +1,30 @@
+# AI-Arne portfolio – Apache config
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # Serve existing files and directories directly
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # Clean URL rewrites
+  RewriteRule ^projects/?$ /projects.html [L]
+  RewriteRule ^about/?$    /about.html    [L]
+  RewriteRule ^contact/?$  /contact.html  [L]
+  RewriteRule ^ai-blog/?$  /ai-blog.html  [L]
+
+  # Fallback
+  RewriteRule ^ /index.html [L]
+</IfModule>
+
+# Tell Varnish and browsers not to cache HTML
+<FilesMatch "\.html$">
+  Header set Cache-Control "no-store, no-cache, must-revalidate"
+  Header set Pragma "no-cache"
+  Header unset ETag
+</FilesMatch>
+
+# Cache static assets aggressively (hashed filenames)
+<FilesMatch "\.(css|js|woff2?|png|jpg|svg|ico)$">
+  Header set Cache-Control "public, max-age=31536000, immutable"
+</FilesMatch>

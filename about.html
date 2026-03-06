@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Om mig – Per-Arne Johansson</title>
+  <meta name="description" content="Per-Arne Johansson – IT-infrastruktur, AI-agenter och automation." />
+  <script type="module" src="/src/main.ts"></script>
+</head>
+<body class="bg-gray-900 text-white antialiased">
+
+  <!-- NAV -->
+  <nav class="fixed top-0 left-0 right-0 z-50 bg-gray-900/90 backdrop-blur-sm border-b border-gray-800">
+    <div class="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
+      <a href="/" class="font-semibold text-white tracking-tight">Per-Arne <span class="text-emerald-400">Johansson</span></a>
+      <ul class="hidden sm:flex items-center gap-1">
+        <li><a href="/" class="px-3 py-1.5 rounded-md text-sm text-gray-400 hover:text-white hover:bg-gray-800 transition-colors">Hem</a></li>
+        <li><a href="/projects.html" class="px-3 py-1.5 rounded-md text-sm text-gray-400 hover:text-white hover:bg-gray-800 transition-colors">Projekt</a></li>
+        <li><a href="/ai-blog.html" class="px-3 py-1.5 rounded-md text-sm text-gray-400 hover:text-white hover:bg-gray-800 transition-colors">AI-Blogg</a></li>
+        <li><a href="/about.html" class="px-3 py-1.5 rounded-md text-sm text-white bg-gray-700">Om mig</a></li>
+        <li><a href="/contact.html" class="px-3 py-1.5 rounded-md text-sm text-gray-400 hover:text-white hover:bg-gray-800 transition-colors">Kontakt</a></li>
+      </ul>
+      <button id="menu-btn" class="sm:hidden text-gray-400 hover:text-white" aria-label="Meny">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+    </div>
+    <div id="mobile-menu" class="hidden sm:hidden border-t border-gray-800 bg-gray-900 px-6 py-3 space-y-1">
+      <a href="/" class="block px-3 py-2 rounded-md text-sm text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">Hem</a>
+      <a href="/projects.html" class="block px-3 py-2 rounded-md text-sm text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">Projekt</a>
+      <a href="/ai-blog.html" class="block px-3 py-2 rounded-md text-sm text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">AI-Blogg</a>
+      <a href="/about.html" class="block px-3 py-2 rounded-md text-sm text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">Om mig</a>
+      <a href="/contact.html" class="block px-3 py-2 rounded-md text-sm text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">Kontakt</a>
+    </div>
+  </nav>
+
+  <main class="pt-14 px-6 py-16">
+    <div class="max-w-2xl mx-auto">
+      <p class="text-emerald-400 text-sm font-mono tracking-widest uppercase mb-3">Om mig</p>
+      <h1 class="text-4xl font-bold mb-10">Per-Arne Johansson</h1>
+
+      <div class="space-y-6 text-gray-300 leading-relaxed">
+        <p>
+          Jag heter Per-Arne Johansson och har en magisterexamen i data- och systemvetenskap. Med över 20 års erfarenhet från säkerhetsbranschen har jag specialiserat mig på IT-infrastruktur – med ett särskilt fokus på driftsäkra och pålitliga systemlösningar.
+        </p>
+        <p>
+          På senare år har mitt intresse för AI och automation vuxit sig allt starkare. Jag lär mig bäst genom att bygga och testa – inte genom att enbart läsa. Det har resulterat i ett antal egna projekt där jag experimenterat med LLM-orkestrering, RAG-system och autonoma agenter.
+        </p>
+        <p>
+          Just nu söker jag anställning eller konsultuppdrag där jag kan kombinera min breda IT-erfarenhet med mina kunskaper inom AI-agenter och automation. Målet är att bygga system som faktiskt gör skillnad – som sparar tid, minskar manuellt arbete och skapar värde.
+        </p>
+      </div>
+
+      <div class="mt-12 pt-10 border-t border-gray-800">
+        <p class="text-xs font-mono text-gray-500 uppercase tracking-widest mb-6">Kompetenser</p>
+        <div class="grid sm:grid-cols-2 gap-4">
+          <div>
+            <p class="text-sm font-semibold text-white mb-2">AI & Automation</p>
+            <ul class="text-sm text-gray-400 space-y-1">
+              <li>LLM Orchestration & Multi-agent</li>
+              <li>RAG-system & Vector Databases</li>
+              <li>OpenAI / Anthropic API</li>
+              <li>Google Cloud Functions</li>
+            </ul>
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-white mb-2">Infrastruktur & Plattform</p>
+            <ul class="text-sm text-gray-400 space-y-1">
+              <li>Intune & Microsoft 365</li>
+              <li>Firebase & Firestore</li>
+              <li>Python & TypeScript</li>
+              <li>IT-säkerhet & drift</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-12">
+        <a href="/contact.html" class="inline-block px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-gray-900 font-semibold rounded-lg transition-colors">Kontakta mig</a>
+      </div>
+    </div>
+  </main>
+
+  <footer class="border-t border-gray-800 px-6 py-8 text-center text-gray-600 text-sm">
+    © 2025 Per-Arne Johansson
+  </footer>
+
+</body>
+</html>

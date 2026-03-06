@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Per-Arne Johansson – AI & Automation</title>
+  <meta name="description" content="Jag bygger autonoma AI-agenter, RAG-system och automatiserar verksamheter. Portfolio av Per-Arne Johansson." />
+  <script type="module" src="/src/main.ts"></script>
+</head>
+<body class="bg-gray-900 text-white antialiased">
+
+  <!-- NAV -->
+  <nav class="fixed top-0 left-0 right-0 z-50 bg-gray-900/90 backdrop-blur-sm border-b border-gray-800">
+    <div class="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
+      <a href="/" class="font-semibold text-white tracking-tight">Per-Arne <span class="text-emerald-400">Johansson</span></a>
+      <ul class="hidden sm:flex items-center gap-1">
+        <li><a href="/" class="px-3 py-1.5 rounded-md text-sm text-white bg-gray-700">Hem</a></li>
+        <li><a href="/projects.html" class="px-3 py-1.5 rounded-md text-sm text-gray-400 hover:text-white hover:bg-gray-800 transition-colors">Projekt</a></li>
+        <li><a href="/ai-blog.html" class="px-3 py-1.5 rounded-md text-sm text-gray-400 hover:text-white hover:bg-gray-800 transition-colors">AI-Blogg</a></li>
+        <li><a href="/about.html" class="px-3 py-1.5 rounded-md text-sm text-gray-400 hover:text-white hover:bg-gray-800 transition-colors">Om mig</a></li>
+        <li><a href="/contact.html" class="px-3 py-1.5 rounded-md text-sm text-gray-400 hover:text-white hover:bg-gray-800 transition-colors">Kontakt</a></li>
+      </ul>
+      <button id="menu-btn" class="sm:hidden text-gray-400 hover:text-white" aria-label="Meny">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+    </div>
+    <div id="mobile-menu" class="hidden sm:hidden border-t border-gray-800 bg-gray-900 px-6 py-3 space-y-1">
+      <a href="/" class="block px-3 py-2 rounded-md text-sm text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">Hem</a>
+      <a href="/projects.html" class="block px-3 py-2 rounded-md text-sm text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">Projekt</a>
+      <a href="/ai-blog.html" class="block px-3 py-2 rounded-md text-sm text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">AI-Blogg</a>
+      <a href="/about.html" class="block px-3 py-2 rounded-md text-sm text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">Om mig</a>
+      <a href="/contact.html" class="block px-3 py-2 rounded-md text-sm text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">Kontakt</a>
+    </div>
+  </nav>
+
+  <main class="pt-14">
+
+    <!-- HERO -->
+    <section class="relative overflow-hidden px-6 py-28 sm:py-40">
+      <div class="absolute inset-0 -z-10" style="background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(16,185,129,0.25), transparent)"></div>
+      <div class="max-w-3xl mx-auto">
+        <p class="text-emerald-400 text-sm font-mono tracking-widest uppercase mb-5">AI · LLM · Automation</p>
+        <h1 class="text-5xl sm:text-6xl font-bold leading-tight mb-6">
+          Hej, jag är<br>
+          <span class="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-emerald-400">Per-Arne (Paj).</span>
+        </h1>
+        <p class="text-xl text-gray-300 leading-relaxed mb-10 max-w-2xl">
+          Jag bygger autonoma AI-agenter, RAG-system och automatiserar verksamheter.
+        </p>
+        <div class="flex flex-wrap gap-4">
+          <a href="/projects.html" class="px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-gray-900 font-semibold rounded-lg transition-colors">Se mina projekt</a>
+          <a href="/contact.html" class="px-6 py-3 border border-gray-600 hover:border-gray-400 text-gray-300 hover:text-white rounded-lg transition-colors">Kontakta mig</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- SKILLS -->
+    <section class="px-6 py-16 border-t border-gray-800">
+      <div class="max-w-3xl mx-auto">
+        <p class="text-xs font-mono text-gray-500 uppercase tracking-widest mb-6">Nyckelkompetenser</p>
+        <div class="flex flex-wrap gap-3">
+          <span class="px-4 py-1.5 bg-gray-800 border border-gray-700 text-gray-300 text-sm rounded-full hover:border-emerald-500 hover:text-emerald-400 transition-colors cursor-default">Python</span>
+          <span class="px-4 py-1.5 bg-gray-800 border border-gray-700 text-gray-300 text-sm rounded-full hover:border-emerald-500 hover:text-emerald-400 transition-colors cursor-default">TypeScript</span>
+          <span class="px-4 py-1.5 bg-gray-800 border border-gray-700 text-gray-300 text-sm rounded-full hover:border-emerald-500 hover:text-emerald-400 transition-colors cursor-default">LLM Orchestration</span>
+          <span class="px-4 py-1.5 bg-gray-800 border border-gray-700 text-gray-300 text-sm rounded-full hover:border-emerald-500 hover:text-emerald-400 transition-colors cursor-default">RAG</span>
+          <span class="px-4 py-1.5 bg-gray-800 border border-gray-700 text-gray-300 text-sm rounded-full hover:border-emerald-500 hover:text-emerald-400 transition-colors cursor-default">OpenClaw</span>
+          <span class="px-4 py-1.5 bg-gray-800 border border-gray-700 text-gray-300 text-sm rounded-full hover:border-emerald-500 hover:text-emerald-400 transition-colors cursor-default">Firebase</span>
+          <span class="px-4 py-1.5 bg-gray-800 border border-gray-700 text-gray-300 text-sm rounded-full hover:border-emerald-500 hover:text-emerald-400 transition-colors cursor-default">Google Cloud</span>
+          <span class="px-4 py-1.5 bg-gray-800 border border-gray-700 text-gray-300 text-sm rounded-full hover:border-emerald-500 hover:text-emerald-400 transition-colors cursor-default">Intune & Microsoft 365</span>
+          <span class="px-4 py-1.5 bg-gray-800 border border-gray-700 text-gray-300 text-sm rounded-full hover:border-emerald-500 hover:text-emerald-400 transition-colors cursor-default">Automation</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- FEATURED PROJECTS -->
+    <section class="px-6 py-16 border-t border-gray-800">
+      <div class="max-w-3xl mx-auto">
+        <h2 class="text-2xl font-bold mb-2">Utvalda projekt</h2>
+        <p class="text-gray-400 text-sm mb-10">Ett urval av vad jag byggt.</p>
+        <div class="grid gap-6 sm:grid-cols-3">
+
+          <a href="/projects.html" class="group flex flex-col bg-gray-800/50 border border-gray-700 hover:border-emerald-500/50 rounded-xl p-5 transition-colors">
+            <h3 class="font-semibold text-white mb-2 group-hover:text-emerald-400 transition-colors">AI-Arne Portal</h3>
+            <p class="text-gray-400 text-sm leading-relaxed mb-4 flex-1">AI-driven portalplattform med autonoma Cloud-agenter som genererar och publicerar nyheter och tutorials.</p>
+            <div class="flex flex-wrap gap-1.5">
+              <span class="px-2 py-0.5 bg-gray-700/60 text-gray-400 text-xs rounded">TypeScript</span>
+              <span class="px-2 py-0.5 bg-gray-700/60 text-gray-400 text-xs rounded">Firebase</span>
+              <span class="px-2 py-0.5 bg-gray-700/60 text-gray-400 text-xs rounded">Google Cloud</span>
+            </div>
+          </a>
+
+          <a href="/projects.html" class="group flex flex-col bg-gray-800/50 border border-gray-700 hover:border-emerald-500/50 rounded-xl p-5 transition-colors">
+            <h3 class="font-semibold text-white mb-2 group-hover:text-emerald-400 transition-colors">OpenClaw Sub-agents</h3>
+            <p class="text-gray-400 text-sm leading-relaxed mb-4 flex-1">Hierarkiskt multi-agent-system med manager-agent som delegerar till parallella underagenter.</p>
+            <div class="flex flex-wrap gap-1.5">
+              <span class="px-2 py-0.5 bg-gray-700/60 text-gray-400 text-xs rounded">Python</span>
+              <span class="px-2 py-0.5 bg-gray-700/60 text-gray-400 text-xs rounded">LLM Orchestration</span>
+            </div>
+          </a>
+
+          <a href="/projects.html" class="group flex flex-col bg-gray-800/50 border border-gray-700 hover:border-emerald-500/50 rounded-xl p-5 transition-colors">
+            <h3 class="font-semibold text-white mb-2 group-hover:text-emerald-400 transition-colors">Lokal RAG</h3>
+            <p class="text-gray-400 text-sm leading-relaxed mb-4 flex-1">RAG-pipeline som kör helt lokalt – ingen data lämnar miljön. Embeddings, vector store och lokal LLM.</p>
+            <div class="flex flex-wrap gap-1.5">
+              <span class="px-2 py-0.5 bg-gray-700/60 text-gray-400 text-xs rounded">Python</span>
+              <span class="px-2 py-0.5 bg-gray-700/60 text-gray-400 text-xs rounded">RAG</span>
+              <span class="px-2 py-0.5 bg-gray-700/60 text-gray-400 text-xs rounded">Vector DB</span>
+            </div>
+          </a>
+
+        </div>
+        <div class="mt-8">
+          <a href="/projects.html" class="text-emerald-400 hover:text-emerald-300 text-sm font-medium transition-colors">Alla projekt →</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="px-6 py-24 border-t border-gray-800">
+      <div class="max-w-3xl mx-auto text-center">
+        <h2 class="text-3xl font-bold mb-4">Söker du expertis inom AI & automation?</h2>
+        <p class="text-gray-400 mb-8 max-w-xl mx-auto">Jag är öppen för anställningar och konsultuppdrag inom AI-agenter, LLM-orkestrering och automatisering.</p>
+        <a href="/contact.html" class="inline-block px-8 py-3 bg-emerald-500 hover:bg-emerald-400 text-gray-900 font-semibold rounded-lg transition-colors">Kontakta mig</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="border-t border-gray-800 px-6 py-8 text-center text-gray-600 text-sm">
+    © 2025 Per-Arne Johansson
+  </footer>
+
+</body>
+</html>

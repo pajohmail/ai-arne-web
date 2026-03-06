@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Projekt – Per-Arne Johansson</title>
+  <meta name="description" content="Case studies och projekt inom AI-agenter, RAG och automation." />
+  <script type="module" src="/src/main.ts"></script>
+</head>
+<body class="bg-gray-900 text-white antialiased">
+
+  <!-- NAV -->
+  <nav class="fixed top-0 left-0 right-0 z-50 bg-gray-900/90 backdrop-blur-sm border-b border-gray-800">
+    <div class="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
+      <a href="/" class="font-semibold text-white tracking-tight">Per-Arne <span class="text-emerald-400">Johansson</span></a>
+      <ul class="hidden sm:flex items-center gap-1">
+        <li><a href="/" class="px-3 py-1.5 rounded-md text-sm text-gray-400 hover:text-white hover:bg-gray-800 transition-colors">Hem</a></li>
+        <li><a href="/projects.html" class="px-3 py-1.5 rounded-md text-sm text-white bg-gray-700">Projekt</a></li>
+        <li><a href="/ai-blog.html" class="px-3 py-1.5 rounded-md text-sm text-gray-400 hover:text-white hover:bg-gray-800 transition-colors">AI-Blogg</a></li>
+        <li><a href="/about.html" class="px-3 py-1.5 rounded-md text-sm text-gray-400 hover:text-white hover:bg-gray-800 transition-colors">Om mig</a></li>
+        <li><a href="/contact.html" class="px-3 py-1.5 rounded-md text-sm text-gray-400 hover:text-white hover:bg-gray-800 transition-colors">Kontakt</a></li>
+      </ul>
+      <button id="menu-btn" class="sm:hidden text-gray-400 hover:text-white" aria-label="Meny">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+    </div>
+    <div id="mobile-menu" class="hidden sm:hidden border-t border-gray-800 bg-gray-900 px-6 py-3 space-y-1">
+      <a href="/" class="block px-3 py-2 rounded-md text-sm text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">Hem</a>
+      <a href="/projects.html" class="block px-3 py-2 rounded-md text-sm text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">Projekt</a>
+      <a href="/ai-blog.html" class="block px-3 py-2 rounded-md text-sm text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">AI-Blogg</a>
+      <a href="/about.html" class="block px-3 py-2 rounded-md text-sm text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">Om mig</a>
+      <a href="/contact.html" class="block px-3 py-2 rounded-md text-sm text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">Kontakt</a>
+    </div>
+  </nav>
+
+  <main class="pt-14 px-6 py-16">
+    <div class="max-w-3xl mx-auto">
+      <p class="text-emerald-400 text-sm font-mono tracking-widest uppercase mb-3">Case Studies</p>
+      <h1 class="text-4xl font-bold mb-3">Projekt</h1>
+      <p class="text-gray-400 mb-14 max-w-xl">Problem jag identifierat, lösningar jag byggt och tekniken bakom.</p>
+
+      <div class="space-y-10">
+
+        <!-- Project 1 -->
+        <article class="bg-gray-800/40 border border-gray-700 hover:border-gray-600 rounded-xl p-7 transition-colors">
+          <div class="flex items-center gap-3 mb-1">
+            <h2 class="text-2xl font-bold">Teams Sales RAG Agent</h2>
+            <span class="px-2 py-0.5 bg-yellow-500/15 text-yellow-400 text-xs font-mono rounded border border-yellow-500/30">Konceptskiss</span>
+          </div>
+          <p class="text-emerald-400 text-sm mb-6">AI-driven säljassistent för Microsoft Teams med Enterprise RAG</p>
+          <p class="text-yellow-400/80 text-xs mb-6 leading-relaxed">⚠ Detta är en arkitektur- och idéskiss, inte ett färdigt projekt. Syftet är att demonstrera hur en sådan lösning skulle kunna designas och integreras i ett Enterprise M365-ekosystem.</p>
+          <div class="grid sm:grid-cols-2 gap-5 mb-6">
+            <div>
+              <p class="text-xs font-mono text-gray-500 uppercase tracking-widest mb-2">Problemet</p>
+              <p class="text-gray-300 text-sm leading-relaxed">Säljteam spenderar för mycket tid på att söka i interna system efter produktinfo, prislistor och kundhistorik. Informationen finns men är utspridd och svår att nå snabbt i en kundkonversation.</p>
+            </div>
+            <div>
+              <p class="text-xs font-mono text-gray-500 uppercase tracking-widest mb-2">Lösningen</p>
+              <p class="text-gray-300 text-sm leading-relaxed">En RAG-agent integrerad direkt i Microsoft Teams som låter säljare chatta säkert med intern företagsdata. Byggd med Semantic Kernel och Azure AI Search – all data stannar inom företagets Microsoft 365-tenant.</p>
+            </div>
+          </div>
+          <div class="flex flex-wrap gap-2 mb-6">
+            <span class="px-3 py-1 bg-gray-700/60 text-gray-300 text-xs rounded-full">Semantic Kernel</span>
+            <span class="px-3 py-1 bg-gray-700/60 text-gray-300 text-xs rounded-full">Azure AI Search</span>
+            <span class="px-3 py-1 bg-gray-700/60 text-gray-300 text-xs rounded-full">Microsoft Teams</span>
+            <span class="px-3 py-1 bg-gray-700/60 text-gray-300 text-xs rounded-full">RAG</span>
+            <span class="px-3 py-1 bg-gray-700/60 text-gray-300 text-xs rounded-full">Python</span>
+          </div>
+          <span class="inline-flex items-center gap-2 px-4 py-2 bg-gray-800 text-gray-600 text-sm rounded-lg cursor-not-allowed">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+            Privat repo
+          </span>
+        </article>
+
+        <!-- Project 2 -->
+        <article class="bg-gray-800/40 border border-gray-700 hover:border-gray-600 rounded-xl p-7 transition-colors">
+          <h2 class="text-2xl font-bold mb-1">GitHub Issue Auto-Agent</h2>
+          <p class="text-emerald-400 text-sm mb-6">Pollar GitHub-repos och låter AI lösa issues automatiskt</p>
+          <div class="grid sm:grid-cols-2 gap-5 mb-6">
+            <div>
+              <p class="text-xs font-mono text-gray-500 uppercase tracking-widest mb-2">Problemet</p>
+              <p class="text-gray-300 text-sm leading-relaxed">Repetitiva issues och boilerplate-uppgifter tar oproportionerligt mycket tid från kärnutveckling.</p>
+            </div>
+            <div>
+              <p class="text-xs font-mono text-gray-500 uppercase tracking-widest mb-2">Lösningen</p>
+              <p class="text-gray-300 text-sm leading-relaxed">En daemon pollar repos var 15:e minut, identifierar issues med specifik label och startar en AI-agent som analyserar, implementerar, testar och öppnar en PR – helt utan manuell intervention.</p>
+            </div>
+          </div>
+          <div class="flex flex-wrap gap-2 mb-6">
+            <span class="px-3 py-1 bg-gray-700/60 text-gray-300 text-xs rounded-full">Bash</span>
+            <span class="px-3 py-1 bg-gray-700/60 text-gray-300 text-xs rounded-full">GitHub CLI</span>
+            <span class="px-3 py-1 bg-gray-700/60 text-gray-300 text-xs rounded-full">AI Agents</span>
+            <span class="px-3 py-1 bg-gray-700/60 text-gray-300 text-xs rounded-full">Automation</span>
+          </div>
+          <a href="https://github.com/pajohmail/autoagent" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg transition-colors">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+            GitHub
+          </a>
+        </article>
+
+        <!-- Project 3 -->
+        <article class="bg-gray-800/40 border border-gray-700 hover:border-gray-600 rounded-xl p-7 transition-colors">
+          <h2 class="text-2xl font-bold mb-1">OpenClaw Sub-agents</h2>
+          <p class="text-emerald-400 text-sm mb-6">Hierarkiskt multi-agent-system med parallell exekvering</p>
+          <div class="grid sm:grid-cols-2 gap-5 mb-6">
+            <div>
+              <p class="text-xs font-mono text-gray-500 uppercase tracking-widest mb-2">Problemet</p>
+              <p class="text-gray-300 text-sm leading-relaxed">Enkla LLM-anrop kan inte hantera komplexa uppgifter som kräver specialisering och parallellism. Sekventiella anrop skalas dåligt kostnadsmässigt.</p>
+            </div>
+            <div>
+              <p class="text-xs font-mono text-gray-500 uppercase tracking-widest mb-2">Lösningen</p>
+              <p class="text-gray-300 text-sm leading-relaxed">Manager/worker-mönster där en orchestrator bryter ner uppgifter och delegerar till specialiserade underagenter i parallell exekvering. Resultaten aggregeras och valideras av managern.</p>
+            </div>
+          </div>
+          <div class="flex flex-wrap gap-2 mb-6">
+            <span class="px-3 py-1 bg-gray-700/60 text-gray-300 text-xs rounded-full">Python</span>
+            <span class="px-3 py-1 bg-gray-700/60 text-gray-300 text-xs rounded-full">LLM Orchestration</span>
+            <span class="px-3 py-1 bg-gray-700/60 text-gray-300 text-xs rounded-full">OpenAI</span>
+            <span class="px-3 py-1 bg-gray-700/60 text-gray-300 text-xs rounded-full">Anthropic</span>
+            <span class="px-3 py-1 bg-gray-700/60 text-gray-300 text-xs rounded-full">Async</span>
+          </div>
+          <span class="inline-flex items-center gap-2 px-4 py-2 bg-gray-800 text-gray-600 text-sm rounded-lg cursor-not-allowed">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+            Privat repo
+          </span>
+        </article>
+
+        <!-- Project 4 -->
+        <article class="bg-gray-800/40 border border-gray-700 hover:border-gray-600 rounded-xl p-7 transition-colors">
+          <h2 class="text-2xl font-bold mb-1">Lokal RAG</h2>
+          <p class="text-emerald-400 text-sm mb-6">Retrieval-Augmented Generation-pipeline utan molntjänster</p>
+          <div class="grid sm:grid-cols-2 gap-5 mb-6">
+            <div>
+              <p class="text-xs font-mono text-gray-500 uppercase tracking-widest mb-2">Problemet</p>
+              <p class="text-gray-300 text-sm leading-relaxed">Känsliga interna dokument kan inte processas via externa AI-API:er utan att bryta mot dataskyddskrav eller interna säkerhetspolicies.</p>
+            </div>
+            <div>
+              <p class="text-xs font-mono text-gray-500 uppercase tracking-widest mb-2">Lösningen</p>
+              <p class="text-gray-300 text-sm leading-relaxed">Fullständig RAG-pipeline som kör lokalt: dokumentingestion, chunking, embedding via lokal modell, vector store och query-loop mot lokal LLM. Ingen data lämnar miljön.</p>
+            </div>
+          </div>
+          <div class="flex flex-wrap gap-2 mb-6">
+            <span class="px-3 py-1 bg-gray-700/60 text-gray-300 text-xs rounded-full">Python</span>
+            <span class="px-3 py-1 bg-gray-700/60 text-gray-300 text-xs rounded-full">RAG</span>
+            <span class="px-3 py-1 bg-gray-700/60 text-gray-300 text-xs rounded-full">Vector DB</span>
+            <span class="px-3 py-1 bg-gray-700/60 text-gray-300 text-xs rounded-full">Embeddings</span>
+            <span class="px-3 py-1 bg-gray-700/60 text-gray-300 text-xs rounded-full">Local LLM</span>
+          </div>
+          <span class="inline-flex items-center gap-2 px-4 py-2 bg-gray-800 text-gray-600 text-sm rounded-lg cursor-not-allowed">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+            Privat repo
+          </span>
+        </article>
+
+        <!-- Project 5 -->
+        <article class="bg-gray-800/40 border border-gray-700 hover:border-gray-600 rounded-xl p-7 transition-colors">
+          <h2 class="text-2xl font-bold mb-1">MCP-brygga & OpenClaw Bot</h2>
+          <p class="text-emerald-400 text-sm mb-6">Personlig AI-infrastruktur med långtidsminne och lokal RAG via MCP</p>
+          <div class="grid sm:grid-cols-2 gap-5 mb-6">
+            <div>
+              <p class="text-xs font-mono text-gray-500 uppercase tracking-widest mb-2">Problemet</p>
+              <p class="text-gray-300 text-sm leading-relaxed">Kommersiella AI-assistenter saknar persistent minne, känner inte till din kontext och kan inte agera autonomt i din miljö. Varje session börjar från noll.</p>
+            </div>
+            <div>
+              <p class="text-xs font-mono text-gray-500 uppercase tracking-widest mb-2">Lösningen</p>
+              <p class="text-gray-300 text-sm leading-relaxed">En OpenClaw-baserad autonom agent med en MCP-brygga (Model Context Protocol) som kopplar till en lokal RAG-hjärna. Agenten har långtidsminne, server-access och kan utföra uppgifter självständigt – ett levande exempel på hur AI faktiskt automatiserar vardagsarbetet.</p>
+            </div>
+          </div>
+          <div class="flex flex-wrap gap-2 mb-6">
+            <span class="px-3 py-1 bg-gray-700/60 text-gray-300 text-xs rounded-full">OpenClaw</span>
+            <span class="px-3 py-1 bg-gray-700/60 text-gray-300 text-xs rounded-full">MCP</span>
+            <span class="px-3 py-1 bg-gray-700/60 text-gray-300 text-xs rounded-full">RAG</span>
+            <span class="px-3 py-1 bg-gray-700/60 text-gray-300 text-xs rounded-full">Python</span>
+            <span class="px-3 py-1 bg-gray-700/60 text-gray-300 text-xs rounded-full">Långtidsminne</span>
+          </div>
+          <span class="inline-flex items-center gap-2 px-4 py-2 bg-gray-800 text-gray-600 text-sm rounded-lg cursor-not-allowed">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+            Privat repo
+          </span>
+        </article>
+
+      </div>
+
+      <div class="mt-14 text-center">
+        <a href="/contact.html" class="inline-block px-8 py-3 bg-emerald-500 hover:bg-emerald-400 text-gray-900 font-semibold rounded-lg transition-colors">Diskutera ett projekt</a>
+      </div>
+    </div>
+  </main>
+
+  <footer class="border-t border-gray-800 px-6 py-8 text-center text-gray-600 text-sm">
+    © 2025 Per-Arne Johansson
+  </footer>
+
+</body>
+</html>
